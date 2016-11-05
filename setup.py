@@ -16,7 +16,7 @@ setup(
 
     url = "http://pypi.python.org/pypi/beval_v010/",
 
-    description = "TBA",
+    description = "To be added",
 
     install_requires = [],
 
