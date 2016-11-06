@@ -1,8 +1,10 @@
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And, Not, MockCriteria
+from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And, Not
+from tests.test_helper import MockCriteria
 
 class TestMockCriteria( TestCase ):
+
 
     def test_mock_simple( self ):
         mock = MockCriteria( True, None )

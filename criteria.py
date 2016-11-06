@@ -189,7 +189,44 @@ class Ge( Eq ):
 
 
 class In( Eq ):
-    pass
+
+
+    def __init__( self, left, *right ):
+        super( In, self ).__init__( left, right )
+
+    def __call__( self, ctx ):
+        obj, err = safe_monad( lambda: ctx[ self.left ] )
+        """
+        tuple has 2 states:
+        1. ( val, None ): success getting the underlying info/val
+        2. ( None, err ): error accessing underlying info/val
+        """
+        if err is not None:
+            """ missing info to compare """
+            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( None, err )
+
+        else:
+            anyError = None
+            for one in self.right:
+                """ has some info to compare """
+                obj_, err_ = safe_monad( lambda: self.op( obj, one ) )
+                """
+                tuple has 2 states:
+                    1. ( val, None ):                   val can be True or False
+                    2. ( None, err ):                   got error during cmp
+                """
+                if obj_ == True:
+                    return ( obj_, err_ )
+
+                if anyError is None and ( obj_ is None and err_ is not None ):
+                    anyError = err_
+
+            # no positive hit
+            if anyError is None:
+                return ( False, None )
+
+            else:
+                return ( Criteria.UNKNOWN, anyError ) if self.fuzzy( ctx ) else ( None, anyError )
 
 
 class NotIn( In ):
@@ -470,13 +507,4 @@ class Not( Bool ):
             return ( not ans, err )
         else:
             return ( ans, err )
-
-
-class MockCriteria( Eq ):
-
-    def __init__( self, left, right ):
-        super( MockCriteria, self ).__init__( left, right, None )
-
-    def __call__( self, ctx ):
-        return ( self.left, self.right )
 

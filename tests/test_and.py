@@ -1,6 +1,7 @@
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And, MockCriteria
+from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And
+from tests.test_helper import MockCriteria
 
 class TestAnd( TestCase ):
     """
