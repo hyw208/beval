@@ -230,7 +230,23 @@ class In( Eq ):
 
 
 class NotIn( In ):
-    pass
+
+
+    def __init__( self, left, *right ):
+        super( NotIn, self ).__init__( left, *right )
+
+    def __call__( self, ctx ):
+        ans, err = super( NotIn, self ).__call__( ctx )
+        """
+        True
+        False
+        Criteria.UNKNOWN
+        None, Error
+        """
+        if ans in ( True, False ):
+            return ( not ans, err )
+        else:
+            return ( ans, err )
 
 
 class And( Eq ):
