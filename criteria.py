@@ -452,18 +452,11 @@ class Or( Eq ):
                 return ( Criteria.UNKNOWN, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
 
 
-class Not( Criteria ):
+class Not( Bool ):
 
-    @property
-    def one( self ):
-        return self._one
-
-    @one.setter
-    def one( self, one ):
-        self._one = one
 
     def __init__( self, one ):
-        self._one = one
+        super( Not, self ).__init__( one )
 
     def __call__( self, ctx ):
         ans, err = self.one( ctx )
@@ -478,4 +471,12 @@ class Not( Criteria ):
         else:
             return ( ans, err )
 
+
+class MockCriteria( Eq ):
+
+    def __init__( self, left, right ):
+        super( MockCriteria, self ).__init__( left, right, None )
+
+    def __call__( self, ctx ):
+        return ( self.left, self.right )
 
