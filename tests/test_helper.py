@@ -25,3 +25,14 @@ class Person(object):
     @property
     def fuzzy(self):
         return self._fuzzy
+
+
+class ObjErrorWhenComp( object ):
+
+
+    def __init__( self, clazz ):
+        self._clazz = clazz
+
+    def __cmp__( self, other ):
+        raise self._clazz()
+

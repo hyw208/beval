@@ -1,7 +1,8 @@
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And, Not
-from tests.test_helper import MockCriteria
+from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And, Not, In
+from tests.test_helper import MockCriteria, ObjErrorWhenComp
+import operator
 
 class TestMockCriteria( TestCase ):
 
@@ -15,6 +16,24 @@ class TestMockCriteria( TestCase ):
         mock = MockCriteria( False, KeyError() )
         ans, err = mock( Ctx( {} ) )
         self.assertFalse( ans )
+        self.assertIsInstance( err, KeyError )
+
+    def test_error_comp( self ):
+        obj = ObjErrorWhenComp(KeyError)
+        with self.assertRaises( KeyError ):
+            operator.eq( obj, "AAA" )
+
+        in_ = In( "Rating", "AAA", "AA", "A" )
+        ctx = Ctx( { "Rating": obj } )
+        ans, err = in_( ctx )
+        self.assertIsNone( ans )
+        self.assertIsInstance( err, KeyError )
+
+        obj = ObjErrorWhenComp( KeyError )
+        in_ = In( "Rating", "AAA", "AA", "A" )
+        ctx = Ctx( { "Rating": obj, "fuzzy": True } )
+        ans, err = in_( ctx )
+        self.assertEqual( ans, Criteria.UNKNOWN )
         self.assertIsInstance( err, KeyError )
 
 
