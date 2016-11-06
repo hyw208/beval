@@ -1,6 +1,27 @@
 
 import operator
 
+def safe_monad( func ):
+    """ monad style """
+    try:
+        obj = func()
+        return ( obj, None )
+
+    except Exception as err:
+        return ( None, err )
+
+def safe( func, fuzzy ):
+    """ based on lenient flag, either return monad style or raise original error """
+    ans, err = safe_monad( func )
+    if err is None:
+        return ( ans, None )
+
+    elif fuzzy:
+        return ( Criteria.UNKNOWN, err )
+
+    else:
+        return ( None, err )
+
 class Ctx( object ):
     """ Object that holds the target object evaluated by Criteria """
 
@@ -32,39 +53,12 @@ class Ctx( object ):
 
         else:
             """ not sure how to get info out of target """
-            raise KeyError( "Cannot get %s out of object of type %s" % ( item, type( self.target ) ) )
+            return KeyError( "Cannot get %s out of object of type %s" % ( item, type( self.target ) ) )
 
     def fuzzy( self ):
         """ determine if it should tolerate error accessing target object """
-        try:
-            ans = self[ "fuzzy" ]
-            return ans
-
-        except Exception:
-            return False
-
-
-def safe_monad( func ):
-    """ monad style """
-    try:
-        obj = func()
-        return ( obj, None )
-
-    except Exception as err:
-        return ( None, err )
-
-
-def safe( func, fuzzy ):
-    """ based on lenient flag, either return monad style or raise original error """
-    ans, err = safe_monad( func )
-    if err is None:
-        return ( ans, None )
-
-    elif fuzzy:
-        return ( Criteria.UNKNOWN, err )
-
-    else:
-        raise err
+        ans, err = safe_monad( lambda: self[ "fuzzy" ] )
+        return False if err is not None else ans
 
 
 class Criteria( object ):
@@ -72,12 +66,12 @@ class Criteria( object ):
     UNKNOWN = "__UNKNOWN__"
 
     def __call__( self, ctx ):
-        """ default to unknown """
-        return Criteria.UNKNOWN
+        """ default to unknown if fuzzy is True """
+        if self.fuzzy( ctx ):
+            return Criteria.UNKNOWN
 
-    def access( self, ctx, item ):
-        """ get the item from ctx object """
-        return safe( lambda: ctx[ item ], self.fuzzy( ctx ) )
+        else:
+            raise NotImplementedError
 
     def fuzzy( self, ctx ):
         """ default to checking ctx's fuzzy policy """
@@ -99,7 +93,7 @@ class Bool( Criteria ):
         self._one = one
 
     def __call__( self, ctx ):
-        return self.one
+        return ( self.one, None )
 
 # true criteria
 True_ = Bool( True )
@@ -142,16 +136,26 @@ class Eq( Criteria ):
 
     def __call__( self, ctx ):
         """ check if ctx's info matches the condition inside eq criteria """
-        obj, err = self.access( ctx, self.left )
-
-        # obj can be anything, 1.3, None, "USA", Criteria.UNKNOWN etc
-        if err is None:
-            ans, _ = safe( lambda: self.op( obj, self.right ), self.fuzzy( ctx ) )
-            return ans
+        obj, err = safe_monad( lambda: ctx[ self.left ] )
+        """
+        tuple has 2 states:
+        1. ( val, None ): success getting the underlying info/val
+        2. ( None, err ): error accessing underlying info/val
+        """
+        if err is not None:
+            """ missing info to compare """
+            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( None, err )
 
         else:
-            """ it signals that it doesn't know how to compare """
-            return Criteria.UNKNOWN
+            """ has some info to compare """
+            obj_, err_ = safe( lambda: self.op( obj, self.right ), self.fuzzy( ctx ) )
+            """
+            tuple has 3 states:
+                1. ( val, None ):                   val can be True or False
+                2. ( Criteria.UNKNOWN, error ):     got error and fuzzy is True
+                3. ( None, err ):                   got error and fuzzy is False
+            """
+            return ( obj_, err_ )
 
 
 class Ne( Eq ):
@@ -221,12 +225,27 @@ class And( Eq ):
         left.error  true|error  false|error  none|error   none|error
         left.none   true|false  false|false  none|false   none|false
         """
+
         lans, lerr = self.left( ctx )
+        """
+        tuple has 4 states:
+            1. ( val, None ):                   val can be True or False and there is no error
+            2. ( val, error ):                  val can be True or False and there is some error
+            3. ( Criteria.UNKNOWN, error ):     got error and fuzzy is True
+            4. ( None, error ):                 got error and fuzzy is False
+
+        therefore lans has 4 states
+            1. True
+            2. False
+            3. UNKNOWN ( in error state but fuzzy is True )
+            4. None ( in error state and fuzzy is False )
+        """
+
         if lans == False:
             # merged view:
             #             right.true, right.false, right.error, right.none
             # left.false  (  return false, no need to check right  )
-            return False
+            return ( False, lerr )
 
         rans, rerr = self.right( ctx )
         if lans == True:
@@ -235,22 +254,22 @@ class And( Eq ):
             # left.true   true        false        true|error   true|false
             if rans == True:
                 # right.true
-                return True
+                return ( True, lerr or rerr )
 
             elif rans == False:
                 # right.false
-                return False
+                return ( False, lerr or rerr )
 
             elif rans == Criteria.UNKNOWN:
                 # right.none
-                return True if self.fuzzy( ctx ) else False
+                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( False, lerr or rerr )
 
             else:
                 # right.error
                 if self.fuzzy( ctx ):
-                    return True
+                    return ( True, lerr or rerr )
                 else:
-                    raise rerr
+                    return ( None, lerr or rerr )
 
         elif lans == Criteria.UNKNOWN:
             # merged view:
@@ -258,15 +277,15 @@ class And( Eq ):
             # left.none   true|false  false|false  none|false   none|false
             if rans == True:
                 # right.true
-                return True if self.fuzzy( ctx ) else False
+                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( False, lerr or rerr )
 
             elif rans == False:
                 # right.false
-                return False
+                return ( False, lerr or rerr )
 
             else:
                 # right.error, right.none
-                return Criteria.UNKNOWN if self.fuzzy( ctx ) else False
+                return ( Criteria.UNKNOWN, lerr or rerr ) if self.fuzzy( ctx ) else ( False, lerr or rerr )
 
         else:
             # merged view:
@@ -275,23 +294,23 @@ class And( Eq ):
             if rans == True:
                 # right.true
                 if self.fuzzy( ctx ):
-                    return True
+                    return ( True, lerr or rerr )
                 else:
-                    raise rerr
+                    return ( None, lerr or rerr )
 
             elif rans == False:
                 # right.false
                 if self.fuzzy( ctx ):
-                    return False
+                    return ( False, lerr or rerr )
                 else:
-                    raise rerr
+                    return ( None, lerr or rerr )
 
             else:
                 # right.error, right.none
                 if self.fuzzy( ctx ):
-                    return Criteria.UNKNOWN
+                    return ( Criteria.UNKNOWN, lerr or rerr )
                 else:
-                    raise rerr
+                    return ( None, lerr or rerr )
 
 
 class Or( Criteria ):

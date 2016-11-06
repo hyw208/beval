@@ -6,9 +6,9 @@ class TestEq( TestCase ):
 
     def setUp( self ):
         """ create a dummy target """
-        self.target = { "first_name": "John", "last_name": "Duke", "fuzzy": True }
+        self.target = { "first_name": "John", "last_name": "Duke" }
 
-    def test_eq_simple( self ):
+    def test_eq_positive( self ):
         """ set up a criteria, checking if the first_name of the target is "John" """
         eq = Eq( "first_name", "John" )
 
@@ -16,9 +16,22 @@ class TestEq( TestCase ):
         ctx = Ctx( self.target )
 
         """ test """
-        self.assertTrue( eq( ctx ) )
+        ans, _ = eq( ctx )
+        self.assertTrue( ans )
 
-    def test_eq_none( self ):
+    def test_eq_negative( self ):
+        """ set up a criteria, checking if the first_name of the target is "John" """
+        eq = Eq( "first_name", "Paul" )
+
+        """ wrap inside ctx """
+        ctx = Ctx( self.target )
+
+        """ test """
+        ans, err = eq( ctx )
+        self.assertFalse( ans )
+        self.assertIsNone( err )
+
+    def test_eq_unknown( self ):
         """ """
         eq = Eq( "middle_name", "Joe" )
 
@@ -26,23 +39,9 @@ class TestEq( TestCase ):
         ctx = Ctx( self.target )
 
         """ test """
-        ans = eq( ctx )
+        ans, error = eq( ctx )
         self.assertEqual( ans, Criteria.UNKNOWN )
-
-    def test_eq_raise( self ):
-        """ target has no middle name and fuzzy is set to False """
-        eq = Eq( "middle_name", "Joe" )
-
-        """ wrap inside ctx """
-        target = self.target.copy()
-        del target[ "fuzzy" ]
-
-        """ force fuzzy test to be False """
-        ctx = Ctx( target )
-
-        """ test """
-        with self.assertRaises( KeyError ):
-            ans = eq( ctx )
+        self.assertIsInstance( error, KeyError )
 
 
 if __name__ == '__main__':
