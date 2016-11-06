@@ -453,5 +453,29 @@ class Or( Eq ):
 
 
 class Not( Criteria ):
-    pass
+
+    @property
+    def one( self ):
+        return self._one
+
+    @one.setter
+    def one( self, one ):
+        self._one = one
+
+    def __init__( self, one ):
+        self._one = one
+
+    def __call__( self, ctx ):
+        ans, err = self.one( ctx )
+        """
+        True
+        False
+        Criteria.UNKNOWN
+        None
+        """
+        if ans in ( True, False ):
+            return ( not ans, err )
+        else:
+            return ( ans, err )
+
 
