@@ -2,9 +2,9 @@ import unittest
 from unittest import TestCase
 from criteria import Criteria, Ctx, Eq
 
-class TestEq(TestCase):
+class TestEq( TestCase ):
 
-    def setUp(self):
+    def setUp( self ):
         """ create a dummy target """
         self.target = { "first_name": "John", "last_name": "Duke", "fuzzy": True }
 
@@ -29,7 +29,7 @@ class TestEq(TestCase):
         ans = eq( ctx )
         self.assertEqual( ans, Criteria.UNKNOWN )
 
-    def test_eq_raise(self):
+    def test_eq_raise( self ):
         """ target has no middle name and fuzzy is set to False """
         eq = Eq( "middle_name", "Joe" )
 
