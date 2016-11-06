@@ -4,12 +4,13 @@ from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And
 
 class TestAnd( TestCase ):
     """
-            merged view:
-                        right.true, right.false, right.error, right.none
-            left.true   true        false        true|error   true|false
-            left.false  (  return false, no need to check right  )
-            left.error  true|error  false|error  none|error   none|error
-            left.none   true|false  false|false  none|false   none|false
+    merged view:
+                | right.true | right.false | right.error  | right.unknown
+    ----------------------------------------------------------------------
+    left.true   | true       | false       | T | E        | T | F
+    left.false  | false      | false       | false        | false
+    left.error  | T | E      | F | E       | U | E        | U | E
+    left.unknown| T | F      | false       | U | F        | U | F
     """
 
     def test_and_simple_boolean( self ):
