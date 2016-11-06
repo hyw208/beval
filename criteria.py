@@ -204,29 +204,29 @@ class And( Eq ):
 
     def __call__( self, ctx ):
         """ always check left first,
-        if fuzzy is true: try to be lenient
+        if fuzzy is true: try to be lenient and give true or false
                     | right.true | right.false | right.error  | right.unknown
         ----------------------------------------------------------------------
         left.true   | true       | false       | true         | true
-        left.false  | false      | false       | false        | false
+        left.false  | false      | false       | false        | false (due to short cut)
         left.error  | true       | false       | unknown      | unknown
         left.unknown| true       | false       | unknown      | unknown
 
-        if fuzzy is false: try to be strict
+        if fuzzy is false: try to be strict and give what it is
                     | right.true | right.false | right.error  | right.unknown
         ----------------------------------------------------------------------
-        left.true   | true       | false       | error        | false
-        left.false  | false      | false       | false        | false
-        left.error  | error      | error       | error        | error
-        left.unknown| false      | false       | false        | false
+        left.true   | true       | false       | error        | unknown
+        left.false  | false      | false       | false        | false (due to short cut)
+        left.error  | error      | error       | error        | error (due to short cut)
+        left.unknown| unknown    | unknown     | unknown      | unknown (due to short cut)
 
         merged view:
                     | right.true | right.false | right.error  | right.unknown
         ----------------------------------------------------------------------
-        left.true   | true       | false       | T | E        | T | F
+        left.true   | true       | false       | T | E        | T | U
         left.false  | false      | false       | false        | false
         left.error  | T | E      | F | E       | U | E        | U | E
-        left.unknown| T | F      | false       | U | F        | U | F
+        left.unknown| T | U      | F | U       | U | U        | U | U
         """
 
         lans, lerr = self.left( ctx )
@@ -259,7 +259,7 @@ class And( Eq ):
             merged view:
                         | right.true | right.false | right.error  | right.unknown
             ----------------------------------------------------------------------
-            left.true   | true       | false       | T | E        | T | F
+            left.true   | true       | false       | T | E        | T | U
             """
             if rans == True:
                 # right.true
@@ -271,7 +271,7 @@ class And( Eq ):
 
             elif rans == Criteria.UNKNOWN:
                 # right.unknown
-                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( False, lerr or rerr )
+                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( Criteria.UNKNOWN, lerr or rerr )
 
             else:
                 # right.error
@@ -282,19 +282,19 @@ class And( Eq ):
             merged view:
                         | right.true | right.false | right.error  | right.unknown
             ----------------------------------------------------------------------
-            left.unknown| T | F      | false       | U | F        | U | F
+            left.unknown| T | U      | F | U       | U | U        | U | U
             """
             if rans == True:
                 # right.true
-                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( False, lerr or rerr )
+                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( Criteria.UNKNOWN, lerr or rerr )
 
             elif rans == False:
                 # right.false
-                return ( False, lerr or rerr )
+                return ( False, lerr or rerr ) if self.fuzzy( ctx ) else ( Criteria.UNKNOWN, lerr or rerr )
 
             else:
                 # right.error, right.unknown
-                return ( Criteria.UNKNOWN, lerr or rerr ) if self.fuzzy( ctx ) else ( False, lerr or rerr )
+                return ( Criteria.UNKNOWN, lerr or rerr )
 
         else:
             """
@@ -309,11 +309,11 @@ class And( Eq ):
 
             elif rans == False:
                 # right.false
-                return (False, lerr or rerr) if self.fuzzy( ctx ) else ( None, lerr or rerr )
+                return ( False, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
 
             else:
                 # right.error, right.unknown
-                return (Criteria.UNKNOWN, lerr or rerr) if self.fuzzy( ctx ) else ( None, lerr or rerr )
+                return ( Criteria.UNKNOWN, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
 
 
 class Or( Criteria ):
