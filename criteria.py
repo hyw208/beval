@@ -204,54 +204,63 @@ class And( Eq ):
 
     def __call__( self, ctx ):
         """ always check left first,
-        1. if fuzzy is true: try to be lenient
-                    right.true, right.false, right.error, right.none
-        left.true   true        false        true         true
-        left.false  (  return false, no need to check right  )
-        left.error  true        false        none         none
-        left.none   true        false        none         none
+        if fuzzy is true: try to be lenient
+                    | right.true | right.false | right.error  | right.unknown
+        ----------------------------------------------------------------------
+        left.true   | true       | false       | true         | true
+        left.false  | false      | false       | false        | false
+        left.error  | true       | false       | unknown      | unknown
+        left.unknown| true       | false       | unknown      | unknown
 
-        2. if fuzzy is false: try to be strict
-                    right.true, right.false, right.error, right.none
-        left.true   true        false        error        false
-        left.false  (  return false, no need to check right  )
-        left.error  (  raise error, no need to check right   )
-        left.none   (  return false, no need to check right  )
+        if fuzzy is false: try to be strict
+                    | right.true | right.false | right.error  | right.unknown
+        ----------------------------------------------------------------------
+        left.true   | true       | false       | error        | false
+        left.false  | false      | false       | false        | false
+        left.error  | error      | error       | error        | error
+        left.unknown| false      | false       | false        | false
 
         merged view:
-                    right.true, right.false, right.error, right.none
-        left.true   true        false        true|error   true|false
-        left.false  (  return false, no need to check right  )
-        left.error  true|error  false|error  none|error   none|error
-        left.none   true|false  false|false  none|false   none|false
+                    | right.true | right.false | right.error  | right.unknown
+        ----------------------------------------------------------------------
+        left.true   | true       | false       | T | E        | T | F
+        left.false  | false      | false       | false        | false
+        left.error  | T | E      | F | E       | U | E        | U | E
+        left.unknown| T | F      | false       | U | F        | U | F
         """
 
         lans, lerr = self.left( ctx )
         """
         tuple has 4 states:
             1. ( val, None ):                   val can be True or False and there is no error
-            2. ( val, error ):                  val can be True or False and there is some error
-            3. ( Criteria.UNKNOWN, error ):     got error and fuzzy is True
+            2. ( val, error ):                  val can be True or False and there is error
+            3. ( Criteria.UNKNOWN, error ):     got error but fuzzy is True
             4. ( None, error ):                 got error and fuzzy is False
 
         therefore lans has 4 states
             1. True
             2. False
-            3. UNKNOWN ( in error state but fuzzy is True )
-            4. None ( in error state and fuzzy is False )
+            3. UNKNOWN: in error state but fuzzy is True
+            4. None: in error state and fuzzy is False
         """
 
         if lans == False:
-            # merged view:
-            #             right.true, right.false, right.error, right.none
-            # left.false  (  return false, no need to check right  )
+            """
+            merged view:
+                        | right.true | right.false | right.error  | right.unknown
+            ----------------------------------------------------------------------
+            left.false  | false      | false       | false        | false
+            """
             return ( False, lerr )
 
         rans, rerr = self.right( ctx )
         if lans == True:
-            # merged view:
-            #             right.true, right.false, right.error, right.none
-            # left.true   true        false        true|error   true|false
+            """
+            merged view:
+                        | right.true | right.false | right.error  | right.unknown
+            ----------------------------------------------------------------------
+            left.true   | true       | false       | T | E        | T | F
+            """
             if rans == True:
                 # right.true
                 return ( True, lerr or rerr )
@@ -261,20 +270,20 @@ class And( Eq ):
                 return ( False, lerr or rerr )
 
             elif rans == Criteria.UNKNOWN:
-                # right.none
+                # right.unknown
                 return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( False, lerr or rerr )
 
             else:
                 # right.error
-                if self.fuzzy( ctx ):
-                    return ( True, lerr or rerr )
-                else:
-                    return ( None, lerr or rerr )
+                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
 
         elif lans == Criteria.UNKNOWN:
-            # merged view:
-            #             right.true, right.false, right.error, right.none
-            # left.none   true|false  false|false  none|false   none|false
+            """
+            merged view:
+                        | right.true | right.false | right.error  | right.unknown
+            ----------------------------------------------------------------------
+            left.unknown| T | F      | false       | U | F        | U | F
+            """
             if rans == True:
                 # right.true
                 return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( False, lerr or rerr )
@@ -284,33 +293,27 @@ class And( Eq ):
                 return ( False, lerr or rerr )
 
             else:
-                # right.error, right.none
+                # right.error, right.unknown
                 return ( Criteria.UNKNOWN, lerr or rerr ) if self.fuzzy( ctx ) else ( False, lerr or rerr )
 
         else:
-            # merged view:
-            #             right.true, right.false, right.error, right.none
-            # left.error  true|error  false|error  none|error   none|error
+            """
+            merged view:
+                        | right.true | right.false | right.error  | right.unknown
+            ----------------------------------------------------------------------
+            left.error  | T | E      | F | E       | U | E        | U | E
+            """
             if rans == True:
                 # right.true
-                if self.fuzzy( ctx ):
-                    return ( True, lerr or rerr )
-                else:
-                    return ( None, lerr or rerr )
+                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
 
             elif rans == False:
                 # right.false
-                if self.fuzzy( ctx ):
-                    return ( False, lerr or rerr )
-                else:
-                    return ( None, lerr or rerr )
+                return (False, lerr or rerr) if self.fuzzy( ctx ) else ( None, lerr or rerr )
 
             else:
-                # right.error, right.none
-                if self.fuzzy( ctx ):
-                    return ( Criteria.UNKNOWN, lerr or rerr )
-                else:
-                    return ( None, lerr or rerr )
+                # right.error, right.unknown
+                return (Criteria.UNKNOWN, lerr or rerr) if self.fuzzy( ctx ) else ( None, lerr or rerr )
 
 
 class Or( Criteria ):

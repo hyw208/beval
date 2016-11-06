@@ -6,7 +6,7 @@ class TestNe( TestCase ):
 
     def setUp( self ):
         """ create a dummy target """
-        self.target = { "first_name": "John", "last_name": "Duke" }
+        self.target = { "first_name": "John", "last_name": "Duke", "fuzzy": True }
 
     def test_ne_simple( self ):
         """ set up a criteria, checking if the first_name of the target is "John" """
