@@ -316,8 +316,140 @@ class And( Eq ):
                 return ( Criteria.UNKNOWN, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
 
 
-class Or( Criteria ):
-    pass
+class Or( Eq ):
+
+
+    def __init__( self, left, right ):
+        super( Or, self ).__init__( left, right, operator.or_ )
+
+    def __call__( self, ctx ):
+        """ always check left first,
+        if fuzzy is true: try to be lenient and give true or false
+                    | right.true | right.false | right.error  | right.unknown
+        ----------------------------------------------------------------------
+        left.true   | true       | true        | true         | true (due to short cut)
+        left.false  | true       | false       | false        | false
+        left.error  | true       | false       | unknown      | unknown
+        left.unknown| true       | false       | unknown      | unknown
+
+        if fuzzy is false: try to be strict and give what it is
+                    | right.true | right.false | right.error  | right.unknown
+        ----------------------------------------------------------------------
+        left.true   | true       | true        | true         | true (due to short cut)
+        left.false  | true       | false       | error        | unknown
+        left.error  | error      | error       | error        | error
+        left.unknown| unknown    | unknown     | error        | unknown
+
+        merged view:
+                    | right.true | right.false | right.error  | right.unknown
+        ----------------------------------------------------------------------
+        left.true   | true       | true        | true         | true
+        left.false  | true       | false       | F | E        | F | U
+        left.error  | T | E      | F | E       | U | E        | U | E
+        left.unknown| T | U      | F | U       | U | E        | U | U
+        """
+
+        lans, lerr = self.left( ctx )
+        """
+        tuple has 4 states:
+            1. ( val, None ):                   val can be True or False and there is no error
+            2. ( val, error ):                  val can be True or False and there is error
+            3. ( Criteria.UNKNOWN, error ):     got error but fuzzy is True
+            4. ( None, error ):                 got error and fuzzy is False
+
+        therefore lans has 4 states
+            1. True
+            2. False
+            3. UNKNOWN: in error state but fuzzy is True
+            4. None: in error state and fuzzy is False
+        """
+
+        if lans == True:
+            """
+            merged view:
+                        | right.true | right.false | right.error  | right.unknown
+            ----------------------------------------------------------------------
+        (x) left.true   | true       | true        | true         | true
+            left.false  | true       | false       | F | E        | F | U
+            left.error  | T | E      | F | E       | U | E        | U | E
+            left.unknown| T | U      | F | U       | U | E        | U | U
+            """
+            return ( True, lerr )
+
+        rans, rerr = self.right( ctx )
+        if lans == False:
+            """
+            merged view:
+                        | right.true | right.false | right.error  | right.unknown
+            ----------------------------------------------------------------------
+            left.true   | true       | true        | true         | true
+        (x) left.false  | true       | false       | F | E        | F | U
+            left.error  | T | E      | F | E       | U | E        | U | E
+            left.unknown| T | U      | F | U       | U | E        | U | U
+            """
+            if rans == True:
+                # right.true
+                return ( True, lerr or rerr )
+
+            elif rans == False:
+                # right.false
+                return ( False, lerr or rerr )
+
+            elif rans == Criteria.UNKNOWN:
+                # right.unknown
+                return ( False, lerr or rerr ) if self.fuzzy( ctx ) else ( Criteria.UNKNOWN, lerr or rerr )
+
+            else:
+                # right.error
+                return ( False, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
+
+        elif lans == Criteria.UNKNOWN:
+            """
+            merged view:
+                        | right.true | right.false | right.error  | right.unknown
+            ----------------------------------------------------------------------
+            left.true   | true       | true        | true         | true
+            left.false  | true       | false       | F | E        | F | U
+            left.error  | T | E      | F | E       | U | E        | U | E
+        (x) left.unknown| T | U      | F | U       | U | E        | U | U
+            """
+            if rans == True:
+                # right.true
+                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( Criteria.UNKNOWN, lerr or rerr )
+
+            elif rans == False:
+                # right.false
+                return ( False, lerr or rerr ) if self.fuzzy( ctx ) else ( Criteria.UNKNOWN, lerr or rerr )
+
+            elif rans == Criteria.UNKNOWN:
+                # right.unknown
+                return ( Criteria.UNKNOWN, lerr or rerr )
+
+            else:
+                # right.error
+                return ( Criteria.UNKNOWN, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
+
+        else:
+            """
+            merged view:
+                        | right.true | right.false | right.error  | right.unknown
+            ----------------------------------------------------------------------
+            left.true   | true       | true        | true         | true
+            left.false  | true       | false       | F | E        | F | U
+        (x) left.error  | T | E      | F | E       | U | E        | U | E
+            left.unknown| T | U      | F | U       | U | E        | U | U
+            """
+            if rans == True:
+                # right.true
+                return ( True, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
+
+            elif rans == False:
+                # right.false
+                return ( False, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
+
+            else:
+                # right.error, right.unknown
+                return ( Criteria.UNKNOWN, lerr or rerr ) if self.fuzzy( ctx ) else ( None, lerr or rerr )
 
 
 class Not( Criteria ):
