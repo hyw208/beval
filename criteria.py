@@ -77,6 +77,82 @@ class Criteria( object ):
         """ default to checking ctx's fuzzy policy """
         return ctx.fuzzy()
 
+    def __init__( self ):
+        self._stack = []
+
+    def size( self ):
+        return len( self._stack )
+
+    def _push( self, item ):
+        self._stack.append( item )
+
+    def _pop( self ):
+        return self._stack.pop()
+
+    def Eq( self, left, right ):
+        c = Eq( left, right )
+        self._push( c )
+        return self
+
+    def Ne( self, left, right ):
+        c = Ne( left, right )
+        self._push( c )
+        return self
+
+    def Le( self, left, right ):
+        c = Le( left, right )
+        self._push( c )
+        return self
+
+    def Lt( self, left, right ):
+        c = Lt( left, right )
+        self._push( c )
+        return self
+
+    def Ge( self, left, right ):
+        c = Ge( left, right )
+        self._push( c )
+        return self
+
+    def Gt( self, left, right ):
+        c = Gt( left, right )
+        self._push( c )
+        return self
+
+    def In( self, left, *right ):
+        c = In( left, *right )
+        self._push( c )
+        return self
+
+    def NotIn( self, left, *right ):
+        c = NotIn( left, *right )
+        self._push( c )
+        return self
+
+    def And( self ):
+        r, l = self._pop(), self._pop()
+        c = And( l, r )
+        self._push( c )
+        return self
+
+    def Or( self ):
+        r, l = self._pop(), self._pop()
+        c = Or( l, r )
+        self._push( c )
+        return self
+
+    def Not( self ):
+        c = Not( self._pop() )
+        self._push( c )
+        return self
+
+    def build( self ):
+        if self.size() != 1:
+            raise SyntaxError( "There are more items on stack: %s" % len( self.size() ) )
+
+        else:
+            return self._stack.pop()
+
 
 class Bool( Criteria ):
     """ not sure if we need it but for completeness """
@@ -160,11 +236,13 @@ class Eq( Criteria ):
 
 class Ne( Eq ):
 
+
     def __init__( self, left, right ):
         super( Ne, self ).__init__( left, right, operator.ne )
 
 
 class Lt( Eq ):
+
 
     def __init__( self, left, right ):
         super( Lt, self ).__init__( left, right, operator.lt )
@@ -172,17 +250,20 @@ class Lt( Eq ):
 
 class Le( Eq ):
 
+
     def __init__( self, left, right ):
         super( Le, self ).__init__( left, right, operator.le )
 
 
 class Gt( Eq ):
 
+
     def __init__( self, left, right ):
         super( Gt, self ).__init__( left, right, operator.gt )
 
 
 class Ge( Eq ):
+
 
     def __init__( self, left, right ):
         super( Ge, self ).__init__( left, right, operator.ge )
@@ -523,4 +604,5 @@ class Not( Bool ):
             return ( not ans, err )
         else:
             return ( ans, err )
+
 
