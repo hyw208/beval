@@ -62,6 +62,23 @@ class TestCriteria( TestCase ):
         self.assertGreater( len( available_houses ), len( affordable_houses ) )
         self.assertNotIn( 400000, [ ctx.target.price for ctx in affordable_houses ] )
 
+    def test_fuzzy_match( self ):
+        """ But I can only afford between 150,000 to 450,000 and I don't want house price at 400000 for some reason """
+        my_house_search_criteria = Criteria().Ge( "price", 150000 ).Le( "price", 450000 ).And().Eq( "address", "NYC" ).Not().And().Build()
+        """ Even though the house is missing address """
+        ctx = Ctx( { "fuzzy": True, "price": 200000 } )
+        """ It should still match fuzzy search """
+        ans, err = my_house_search_criteria( ctx )
+        self.assertTrue( ans )
+        self.assertIsInstance( err, KeyError )
+
+        """ However if the address does not match the criteria """
+        ctx = Ctx( { "fuzzy": True, "price": 200000, "address": "NYC" } )
+        """ It should NOT match fuzzy search """
+        ans, err = my_house_search_criteria( ctx )
+        self.assertFalse( ans )
+        self.assertIsNone( err )
+
 
 if __name__ == '__main__':
     unittest.main()
