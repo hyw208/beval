@@ -11,20 +11,35 @@ class MockCriteria( Eq ):
         return ( self.left, self.right )
 
 
-class Person(object):
+class Person( object ):
 
 
-    def __init__(self, first_name, last_name, fuzzy):
+    def __init__( self, first_name, last_name, fuzzy ):
         self.first_name = first_name
         self._last_name = last_name
         self._fuzzy = fuzzy
 
-    def last_name(self):
+    def last_name( self ):
         return self._last_name
 
     @property
-    def fuzzy(self):
+    def fuzzy( self ):
         return self._fuzzy
+
+
+class House( object ):
+
+    def __init__( self, price, address = "not important" ):
+        self._price = price
+        self._address = address
+
+    @property
+    def price( self ):
+        return self._price
+
+    @property
+    def address( self ):
+        return self._address
 
 
 class ObjErrorWhenComp( object ):

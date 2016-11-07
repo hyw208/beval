@@ -1,6 +1,7 @@
 import unittest
 from unittest import TestCase
 from criteria import Criteria, Ctx, And
+from tests.test_helper import House
 
 
 class TestCriteria( TestCase ):
@@ -37,8 +38,31 @@ class TestCriteria( TestCase ):
         self.assertTrue( ans )
         self.assertIsNone( err )
 
+    def test_filter_over_many_objects( self ):
+        """ example of how it can be used """
+
+        """ Say there are many houses available in the market """
+        available_houses = [ Ctx( House( price ) ) for price in xrange( 100000, 500000, 10000 ) ]
+
+        """ But I can only afford between 150,000 to 450,000 and I don't want house price at 400000 for some reason """
+        my_price_range_criteria = Criteria().Ge( "price", 150000 ).Le( "price", 450000 ).And().Eq( "price", 400000 ).Not().And().Build()
+
+        """ Is the first house within my search range? """
+        ans, err = my_price_range_criteria( available_houses[ 0 ] )
+        self.assertEqual( 150000 <= available_houses[ 0 ][ "price" ] <= 45000, ans  )
+        self.assertIsNone( err )
+
+        """ To use built-in filter, I have to create a func that returns True or False since criteria eval returns ans and err tuple """
+        def predicate( house ):
+            ans, _ = my_price_range_criteria( house )
+            return ans
+
+        """ Get all houses within my criteria """
+        affordable_houses = filter( predicate, available_houses )
+        self.assertGreater( len( available_houses ), len( affordable_houses ) )
+        self.assertNotIn( 400000, [ ctx.target.price for ctx in affordable_houses ] )
+
 
 if __name__ == '__main__':
     unittest.main()
-
 
