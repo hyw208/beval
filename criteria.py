@@ -119,6 +119,11 @@ class Criteria( object ):
         self._push( c )
         return self
 
+    def Btw( self, lower, one, upper ):
+        c = Btw( lower, one, upper )
+        self._push( c )
+        return self
+
     def In( self, left, *right ):
         c = In( left, *right )
         self._push( c )
@@ -267,6 +272,62 @@ class Ge( Eq ):
 
     def __init__( self, left, right ):
         super( Ge, self ).__init__( left, right, operator.ge )
+
+
+class Btw( Criteria ):
+
+
+    @property
+    def lower( self ):
+        return self._lower
+
+    @property
+    def lowerOp( self ):
+        return self._lowerOp
+
+    @property
+    def one( self ):
+        return self._one
+
+    @property
+    def upperOp( self ):
+        return self._upperOp
+
+    @property
+    def upper( self ):
+        return self._upper
+
+    def __init__( self, lower, one, upper, lowerOp = operator.le, upperOp = operator.lt ):
+        self._lower = lower
+        self._lowerOp = lowerOp
+        self._one = one
+        self._upperOp = upperOp
+        self._upper = upper
+
+    def __call__( self, ctx ):
+        obj, err = safe_monad( lambda: ctx[ self.one ] )
+        """
+        tuple has 2 states:
+        1. ( val, None ): success getting the underlying info/val
+        2. ( None, err ): error accessing underlying info/val
+        """
+        if err is not None:
+            """ missing info to compare """
+            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( None, err )
+
+        else:
+            obj_, err_ = safe( lambda: self.lowerOp( self.lower, obj ), self.fuzzy( ctx ) )
+            """
+            tuple has 3 states:
+                1. ( val, None ):                   val can be True or False
+                2. ( Criteria.UNKNOWN, error ):     got error and fuzzy is True
+                3. ( None, err ):                   got error and fuzzy is False
+            """
+            if obj_ == True:
+                obj2_, err2_ = safe( lambda: self.upperOp( obj, self.upper ), self.fuzzy( ctx ) )
+                return ( obj2_, err2_ )
+            else:
+                return ( obj_, err_ )
 
 
 class In( Eq ):

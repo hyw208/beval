@@ -45,7 +45,7 @@ class TestCriteria( TestCase ):
         available_houses = [ Ctx( House( price ) ) for price in xrange( 100000, 500000, 10000 ) ]
 
         """ But I can only afford between 150,000 to 450,000 and I don't want house price at 400000 for some reason """
-        my_price_range_criteria = Criteria().Ge( "price", 150000 ).Le( "price", 450000 ).And().Eq( "price", 400000 ).Not().And().Build()
+        my_price_range_criteria = Criteria().Btw( 150000, "price", 450000 ).Eq( "price", 400000 ).Not().And().Build()
 
         """ Is the first house within my search range? """
         ans, err = my_price_range_criteria( available_houses[ 0 ] )
