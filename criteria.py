@@ -146,9 +146,9 @@ class Criteria( object ):
         self._push( c )
         return self
 
-    def build( self ):
+    def Build( self ):
         if self.size() != 1:
-            raise SyntaxError( "There are more items on stack: %s" % len( self.size() ) )
+            raise SyntaxError( "There are more items on stack: %d" % self.size() )
 
         else:
             return self._stack.pop()
