@@ -63,21 +63,29 @@ class TestCriteria( TestCase ):
         self.assertNotIn( 400000, [ ctx.target.price for ctx in affordable_houses ] )
 
     def test_fuzzy_match( self ):
-        """ But I can only afford between 150,000 to 450,000 and I don't want house price at 400000 for some reason """
+        """ another example where fuzzy is turned on """
+
         my_house_search_criteria = Criteria().Ge( "price", 150000 ).Le( "price", 450000 ).And().Eq( "address", "NYC" ).Not().And().Build()
-        """ Even though the house is missing address """
+        """ When fuzzy is turned on, even though the house is missing address """
         ctx = Ctx( { "fuzzy": True, "price": 200000 } )
         """ It should still match fuzzy search """
         ans, err = my_house_search_criteria( ctx )
         self.assertTrue( ans )
         self.assertIsInstance( err, KeyError )
 
-        """ However if the address does not match the criteria """
+        """ When fuzzy is turned on, if the address does not match the criteria """
         ctx = Ctx( { "fuzzy": True, "price": 200000, "address": "NYC" } )
         """ It should NOT match fuzzy search """
         ans, err = my_house_search_criteria( ctx )
         self.assertFalse( ans )
         self.assertIsNone( err )
+
+        """ If fuzzy is turned off """
+        ctx = Ctx( { "price": 200000 } )
+        """ It's missing address and it will report error missing address """
+        ans, err = my_house_search_criteria( ctx )
+        self.assertIsNone( ans )
+        self.assertIsInstance( err, KeyError )
 
 
 if __name__ == '__main__':
