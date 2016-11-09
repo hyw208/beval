@@ -4,7 +4,7 @@ from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And, All
 from tests.test_helper import MockCriteria
 
 class TestAnd( TestCase ):
-    
+
 
     def test_and_simple_boolean( self ):
         and_ = And( True_, True_ )

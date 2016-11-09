@@ -331,13 +331,14 @@ class Btw( Criteria ):
             obj_, err_ = safe( self.fuzzy( ctx ), self.lowerOp, self.lower, obj )
             """
             tuple has 3 states:
-                1. ( val, None ):                   val can be True or False
+                1. ( val, None ):                   val can be True or False or None
                 2. ( Criteria.UNKNOWN, error ):     got error and fuzzy is True
                 3. ( None, err ):                   got error and fuzzy is False
             """
             if obj_ == True:
                 obj2_, err2_ = safe( self.fuzzy( ctx ), self.upperOp, obj, self.upper )
                 return ( obj2_, err2_ )
+
             else:
                 return ( obj_, err_ )
 
@@ -360,6 +361,7 @@ class In( Eq ):
             return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( None, err )
 
         else:
+            negatives = 0
             firstError = None
             for one in self.right:
                 obj_, err_ = safe_monad( self.op, obj, one )
@@ -367,13 +369,20 @@ class In( Eq ):
                 if obj_ == True:
                     return ( obj_, firstError or err_ )
 
-                else:
-                    # obj_ is either False or None
+                elif obj_ == False:
+                    negatives += 1
                     firstError = firstError or err_
 
+                else:
+                    if self.fuzzy( ctx ):
+                        firstError = firstError or err_
+
+                    else:
+                        return ( obj_, firstError or err_ )
+
             """ no positive hit """
-            if firstError is None:
-                return ( False, None )
+            if negatives > 0:
+                return ( False, firstError )
 
             else:
                 return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( None, firstError )
@@ -395,6 +404,7 @@ class NotIn( In ):
         """
         if ans in ( True, False ):
             return ( not ans, err )
+
         else:
             return ( ans, err )
 
@@ -449,6 +459,7 @@ class Any( All ):
 
 
     def __call__( self, ctx ):
+        negatives = 0
         firstError = None
         for one in self.many:
             ans, err = one( ctx )
@@ -462,6 +473,7 @@ class Any( All ):
                 return ( ans, firstError or err )
 
             elif ans == False:
+                negatives += 1
                 firstError = firstError or err
 
             else:
@@ -471,7 +483,11 @@ class Any( All ):
                 else:
                     return ( ans, firstError or err )
 
-        return ( False, firstError )
+        if negatives > 0:
+            return ( False, firstError )
+
+        else:
+            return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( None, firstError )
 
 
 class And( All ):
@@ -520,6 +536,7 @@ class Not( Bool ):
         """
         if ans in ( True, False ):
             return ( not ans, err )
+
         else:
             return ( ans, err )
 
