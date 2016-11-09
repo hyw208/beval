@@ -4,15 +4,7 @@ from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And, All
 from tests.test_helper import MockCriteria
 
 class TestAnd( TestCase ):
-    """
-    merged view:
-                | right.true | right.false | right.error  | right.unknown
-    ----------------------------------------------------------------------
-    left.true   | true       | false       | T | E        | T | U
-    left.false  | false      | false       | false        | false
-    left.error  | T | E      | F | E       | U | E        | U | E
-    left.unknown| T | U      | F | U       | U | U        | U | U
-    """
+    
 
     def test_and_simple_boolean( self ):
         and_ = And( True_, True_ )
