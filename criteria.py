@@ -406,6 +406,10 @@ class All( Criteria ):
     def many( self ):
         return self._many
 
+    @many.setter
+    def many( self, many ):
+        self._many = many
+
     def __init__( self, *many ):
         self._many = many
 
