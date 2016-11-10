@@ -1,4 +1,22 @@
 import operator
+import ast
+
+
+OP_TO_TEXT_MAP = {
+    operator.eq: "==",
+    operator.lt: "<",
+    operator.le: "<=",
+    operator.gt: "<",
+    operator.ge: "<=",
+}
+
+
+def quote( obj ):
+    if isinstance( obj, str ):
+        return "'%s'" % obj
+
+    else:
+        return "%s" % obj
 
 
 def safe_monad( func, *args, **kwargs ):
@@ -13,10 +31,12 @@ def safe_monad( func, *args, **kwargs ):
 def safe( fuzzy, func, *args, **kwargs ):
     ans, err = safe_monad( func, *args, **kwargs )
     if err is None:
+        """ if err is None, then it succeeded """
         return ( ans, None )
 
     else:
-        return ( Criteria.UNKNOWN, err ) if fuzzy else ( None, err )
+        """ otherwise, return unknown if fuzzy, else error """
+        return ( Criteria.UNKNOWN, err ) if fuzzy else ( Criteria.ERROR, err )
 
 
 def access( ctx, item ):
@@ -26,6 +46,7 @@ def access( ctx, item ):
 class Criteria( object ):
 
     UNKNOWN = "__UNKNOWN__"
+    ERROR   = "__ERROR__"
 
     def __call__( self, ctx ):
         raise NotImplementedError
@@ -227,28 +248,24 @@ class Eq( Criteria ):
         self._op = op
 
     def __call__( self, ctx ):
-        """ check if ctx's info matches the condition inside eq criteria """
         obj, err = safe_monad( access, ctx, self.left )
-        """
-        tuple has 2 states:
-        1. ( val, None ): success getting the underlying info/val
-        2. ( None, err ): error accessing underlying info/val
-        """
-        if err is not None:
-            """ missing info to compare """
-            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( None, err )
 
-        else:
-            """ has some info to compare """
+        if err is None:
             obj_, err_ = safe( self.fuzzy( ctx ), self.op, obj, self.right )
-
             """
-            tuple has 3 states:
-                1. ( val, None ):                   val can be True or False
-                2. ( Criteria.UNKNOWN, error ):     got error and fuzzy is True
-                3. ( None, err ):                   got error and fuzzy is False
+            True
+            False
+            Criteria.UNKNOWN
+            Criteria.ERROR
             """
             return ( obj_, err_ )
+
+        else:
+            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( Criteria.ERROR, err )
+
+    def __str__( self ):
+        text = "%s %s %s" % ( self.left, OP_TO_TEXT_MAP[ self.op ], quote( self.right ) )
+        return text
 
 
 class Ne( Eq ):
@@ -318,29 +335,17 @@ class Btw( Criteria ):
 
     def __call__( self, ctx ):
         obj, err = safe_monad( access, ctx, self.one )
-        """
-        tuple has 2 states:
-        1. ( val, None ): success getting the underlying info/val
-        2. ( None, err ): error accessing underlying info/val
-        """
-        if err is not None:
-            """ missing info to compare """
-            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( None, err )
 
-        else:
+        if err is None:
             obj_, err_ = safe( self.fuzzy( ctx ), self.lowerOp, self.lower, obj )
-            """
-            tuple has 3 states:
-                1. ( val, None ):                   val can be True or False or None
-                2. ( Criteria.UNKNOWN, error ):     got error and fuzzy is True
-                3. ( None, err ):                   got error and fuzzy is False
-            """
             if obj_ == True:
                 obj2_, err2_ = safe( self.fuzzy( ctx ), self.upperOp, obj, self.upper )
                 return ( obj2_, err2_ )
 
             else:
                 return ( obj_, err_ )
+        else:
+            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( Criteria.ERROR, err )
 
 
 class In( Eq ):
@@ -351,16 +356,8 @@ class In( Eq ):
 
     def __call__( self, ctx ):
         obj, err = safe_monad( access, ctx, self.left )
-        """
-        tuple has 2 states:
-        1. ( val, None ): success getting the underlying info/val, though val can be None
-        2. ( None, err ): error accessing underlying info/val
-        """
-        if err is not None:
-            """ missing info to compare """
-            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( None, err )
 
-        else:
+        if err is None:
             negatives = 0
             firstError = None
             for one in self.right:
@@ -378,14 +375,18 @@ class In( Eq ):
                         firstError = firstError or err_
 
                     else:
-                        return ( obj_, firstError or err_ )
+                        return ( Criteria.ERROR, firstError or err_ )
 
             """ no positive hit """
             if negatives > 0:
                 return ( False, firstError )
 
             else:
-                return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( None, firstError )
+                return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( Criteria.ERROR, firstError )
+
+        else:
+            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( Criteria.ERROR, err )
+
 
 
 class NotIn( In ):
@@ -400,7 +401,7 @@ class NotIn( In ):
         True
         False
         Criteria.UNKNOWN
-        None, Error
+        Criteria.ERROR
         """
         if ans in ( True, False ):
             return ( not ans, err )
@@ -429,10 +430,10 @@ class All( Criteria ):
         for one in self.many:
             ans, err = one( ctx )
             """
-            1. True
-            2. False
-            3. UNKNOWN: in error state but fuzzy is True
-            4. None: in error state and fuzzy is False
+            True
+            False
+            Criteria.UNKNOWN
+            Criteria.ERROR
             """
             if ans == True:
                 positives += 1
@@ -446,13 +447,13 @@ class All( Criteria ):
                     firstError = firstError or err
 
                 else:
-                    return ( ans, firstError or err )
+                    return ( Criteria.ERROR, firstError or err )
 
         if positives > 0:
             return ( True, firstError )
 
         else:
-            return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( None, firstError )
+            return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( Criteria.ERROR, firstError )
 
 
 class Any( All ):
@@ -464,10 +465,10 @@ class Any( All ):
         for one in self.many:
             ans, err = one( ctx )
             """
-            1. True
-            2. False
-            3. UNKNOWN: in error state but fuzzy is True
-            4. None: in error state and fuzzy is False
+            True
+            False
+            Criteria.UNKNOWN
+            Criteria.ERROR
             """
             if ans == True:
                 return ( ans, firstError or err )
@@ -481,13 +482,13 @@ class Any( All ):
                     firstError = firstError or err
 
                 else:
-                    return ( ans, firstError or err )
+                    return ( Criteria.ERROR, firstError or err )
 
         if negatives > 0:
             return ( False, firstError )
 
         else:
-            return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( None, firstError )
+            return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( Criteria.ERROR, firstError )
 
 
 class And( All ):
@@ -532,7 +533,7 @@ class Not( Bool ):
         True
         False
         Criteria.UNKNOWN
-        None
+        Criteria.ERROR
         """
         if ans in ( True, False ):
             return ( not ans, err )
@@ -541,3 +542,54 @@ class Not( Bool ):
             return ( ans, err )
 
 
+AST_OP_TO_CRITERIA_MAP = {
+    ast.LtE: Le,
+
+}
+
+
+def visit( node, data ):
+    if isinstance( node, ast.Expression ):
+        visit( node.body, data )
+
+    if isinstance( node, ast.BoolOp ): # and, or
+        print
+
+    if isinstance( node, ast.Compare ):
+        name = visit( node.left, data )
+
+        if len( node.ops ) == 1:
+            op = node.ops[ 0 ]
+            comparator = node.comparators[ 0 ]
+            print
+
+        elif len( node.ops ) == 2:
+            lowerOp = node.ops[ 0 ]
+            lower = node.comparators[ 0 ]
+
+            upperOp = node.ops[ 1 ]
+            upper = node.comparator[ 1 ]
+            print
+
+        else:
+            raise Exception( "do not support ast.Compare with more than 2 ops: %s" % node )
+
+
+    if isinstance( node, ast.UnaryOp ):
+        # not
+        pass
+
+    if isinstance( node, ast.Str ):
+        data.append( node.s )
+
+    if isinstance( node, ast.Name ):
+        if node.id == 'True':
+            id = True
+
+        elif node.id == 'False':
+            id = False
+
+        else:
+            id = node.id
+
+        data.append( id )

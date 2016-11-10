@@ -54,9 +54,21 @@ class TestEq( TestCase ):
 
         """ test """
         ans, error = eq( ctx )
-        self.assertIsNone( ans )
+        self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( error, KeyError )
 
+    def test_ser( self ):
+        eq = Eq( "name", "John" )
+        text = str( eq )
+        self.assertEqual( text, "name == 'John'" )
+
+        eq = Eq( "price", 1002 )
+        text = str( eq )
+        self.assertEqual( text, "price == 1002" )
+
+        eq = Eq( "pass", True )
+        text = str( eq )
+        self.assertEqual( text, "pass == True" )
 
 if __name__ == '__main__':
     unittest.main()

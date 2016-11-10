@@ -26,7 +26,7 @@ class TestMockCriteria( TestCase ):
         in_ = In( "Rating", "AAA", "AA", "A" )
         ctx = Ctx( { "Rating": obj } )
         ans, err = in_( ctx )
-        self.assertIsNone( ans )
+        self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( err, KeyError )
 
         obj = ObjErrorWhenComp( KeyError )

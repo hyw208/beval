@@ -34,7 +34,7 @@ class TestBtw( TestCase ):
 
         btw_ = Btw( 100, "price", 200 ) # 100 <= price < 200
         ans, err = btw_( ctx )
-        self.assertIsNone( ans )
+        self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( err, KeyError )
 
     def test_fuzzy_on( self ):

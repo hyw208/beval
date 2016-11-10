@@ -107,7 +107,7 @@ class TestAnd( TestCase ):
         # left.true, right.error, fuzzy.false
         and_ = And( True_, MockCriteria( None, KeyError( "right first" ) ) )
         ans, err = and_( Ctx( { "fuzzy": False } ) )
-        self.assertIsNone( ans )
+        self.assertEqual( ans, Criteria.ERROR )
         self.assertIsNotNone( err )
         self.assertEqual( err.message, "right first" )
 
@@ -120,7 +120,7 @@ class TestAnd( TestCase ):
         # left.true, right.unknown, fuzzy.false
         and_ = And( True_, MockCriteria( Criteria.UNKNOWN, None ) )
         ans, err = and_( Ctx( { "fuzzy": False } ) )
-        self.assertEqual( ans, Criteria.UNKNOWN )
+        self.assertEqual( ans, Criteria.ERROR )
         self.assertIsNone( err )
 
 

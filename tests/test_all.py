@@ -53,7 +53,7 @@ class TestAll( TestCase ):
         many.append( MockCriteria( Criteria.UNKNOWN, Exception( "Address not found" ) ) )
         all_ = All( *many )
         ans, err = all_( ctx )
-        self.assertEqual( ans, Criteria.UNKNOWN )
+        self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( err, Exception )
 
         # should be the same as And
@@ -90,7 +90,7 @@ class TestAll( TestCase ):
         many.append( Btw( 50, "price", 101 ) )
         all_ = All( *many )
         ans, err = all_( ctx )
-        self.assertIsNone( ans )
+        self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( err, KeyError )
 
         # should be the same as And

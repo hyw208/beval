@@ -86,7 +86,7 @@ class TestCriteria( TestCase ):
         ctx = Ctx( { "price": 200000 } )
         """ It's missing address and it will report error missing address """
         ans, err = my_house_search_criteria( ctx )
-        self.assertIsNone( ans )
+        self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( err, KeyError )
 
 
