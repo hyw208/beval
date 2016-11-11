@@ -2,9 +2,10 @@ import unittest
 from unittest import TestCase
 from criteria import Criteria, Ctx, And
 from tests.test_helper import House
+from tests.test_all import BaseCriteriaTest
 
 
-class TestCriteria( TestCase ):
+class TestCriteria( BaseCriteriaTest ):
 
 
     def test_error_build( self ):
@@ -39,8 +40,6 @@ class TestCriteria( TestCase ):
         self.assertIsNone( err )
 
     def test_filter_over_many_objects( self ):
-        """ example of how it can be used """
-
         """ Say there are many houses available in the market """
         available_houses = [ Ctx( House( price ) ) for price in xrange( 100000, 500000, 10000 ) ]
 
@@ -66,17 +65,16 @@ class TestCriteria( TestCase ):
 
     def test_fuzzy_match( self ):
         """ another example where fuzzy is turned on """
-
         my_house_search_criteria = Criteria().Ge( "price", 150000 ).Le( "price", 450000 ).And().Eq( "address", "NYC" ).Not().And().Build()
         """ When fuzzy is turned on, even though the house is missing address """
-        ctx = Ctx( { "fuzzy": True, "price": 200000 } )
+        ctx = Ctx( { "price": 200000 }, True )
         """ It should still match fuzzy search """
         ans, err = my_house_search_criteria( ctx )
         self.assertTrue( ans )
         self.assertIsInstance( err, KeyError )
 
         """ When fuzzy is turned on, if the address does not match the criteria """
-        ctx = Ctx( { "fuzzy": True, "price": 200000, "address": "NYC" } )
+        ctx = Ctx( { "price": 200000, "address": "NYC" }, True )
         """ It should NOT match fuzzy search """
         ans, err = my_house_search_criteria( ctx )
         self.assertFalse( ans )
