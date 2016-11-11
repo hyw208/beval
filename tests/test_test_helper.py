@@ -19,7 +19,7 @@ class TestMockCriteria( TestCase ):
         self.assertIsInstance( err, KeyError )
 
     def test_error_comp( self ):
-        obj = ObjErrorWhenComp(KeyError)
+        obj = ObjErrorWhenComp( KeyError )
         with self.assertRaises( KeyError ):
             operator.eq( obj, "AAA" )
 
@@ -29,7 +29,6 @@ class TestMockCriteria( TestCase ):
         self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( err, KeyError )
 
-        obj = ObjErrorWhenComp( KeyError )
         in_ = In( "Rating", "AAA", "AA", "A" )
         ctx = Ctx( { "Rating": obj, "fuzzy": True } )
         ans, err = in_( ctx )

@@ -7,123 +7,114 @@ from tests.test_helper import MockCriteria
 class TestAll( TestCase ):
 
 
-    def test_all_positive( self ):
-        ctx = Ctx( { "price": 100 } )
+    def setUp( self ):
+        self.target = { "price": 100 }
 
-        many = []
-        many.append( Btw( 100, "price", 200 ) )
-        many.append( Btw( 99, "price", 101 ) )
-        many.append( Btw( 50, "price", 101 ) )
+        self.stdCtx = Ctx( self.target )
+        self.fuzzyCtx = Ctx( self.target, fuzzy = True )
+
+        self.price_btw_100_200 = Btw( 100, "price", 200 )
+        self.price_btw_99_101 = Btw( 99, "price", 101 )
+        self.price_btw_50_101 = Btw( 50, "price", 101 )
+        self.price_btw_98_99 = Btw( 98, "price", 99 )
+
+        self.unknown_exception = MockCriteria( Criteria.UNKNOWN, Exception( "Address not found" ) )
+        self.unknown_error = MockCriteria( Criteria.UNKNOWN, KeyError( "Address not found" ) )
+        self.error_error = MockCriteria( Criteria.ERROR, KeyError( "Address not found" ) )
+        self.none_error = MockCriteria( None, KeyError( "Address not found" ) )
+
+    def test_all_positive( self ):
+        many = [ self.price_btw_100_200, self.price_btw_99_101, self.price_btw_50_101 ]
         all_ = All( *many )
-        ans, err = all_( ctx )
+
+        ans, err = all_( self.stdCtx )
         self.assertTrue( ans )
         self.assertIsNone( err )
 
-        # should be the same as And
-        and_ = And( many[0], many[1] )
-        and_ = And( and_, many[2] )
-        ans_, err_ = and_( ctx )
+        """ test consistent behavior between All, And """
+        and_ = And( And( many[ 0 ], many[ 1 ] ), many[ 2 ] )
+
+        ans_, err_ = and_( self.stdCtx )
         self.assertEqual( ans, ans_ )
         self.assertEqual( err, err_ )
 
     def test_all_negative( self ):
-        ctx = Ctx( { "price": 100 } )
-        many = []
-        many.append( Btw( 100, "price", 200 ) )
-        many.append( Btw( 98, "price", 99 ) )
-        many.append( Btw( 50, "price", 101 ) )
+        many = [ self.price_btw_100_200, self.price_btw_98_99, self.price_btw_50_101 ]
         all_ = All( *many )
-        ans, err = all_( ctx )
+
+        ans, err = all_( self.stdCtx )
         self.assertFalse( ans )
         self.assertIsNone( err )
 
-        # should be the same as And
-        and_ = And( many[0], many[1] )
-        and_ = And( and_, many[2] )
-        ans_, err_ = and_( ctx )
+        """ test consistent behavior between All, And """
+        and_ = And( And( many[ 0 ], many[ 1 ] ), many[ 2 ] )
+
+        ans_, err_ = and_( self.stdCtx )
         self.assertEqual( ans, ans_ )
         self.assertEqual( err, err_ )
 
     def test_all_unknown_fuzzy_off( self ):
-        ctx = Ctx( { "price": 100 } )
-        many = []
-        many.append( Btw( 100, "price", 200 ) )
-        many.append( MockCriteria( Criteria.UNKNOWN, Exception( "Address not found" ) ) )
-        many.append( Btw( 50, "price", 101 ) )
-        many.append( MockCriteria( Criteria.UNKNOWN, Exception( "Address not found" ) ) )
+        many = [ self.price_btw_100_200, self.unknown_exception, self.price_btw_50_101, self.unknown_error ]
         all_ = All( *many )
-        ans, err = all_( ctx )
+
+        ans, err = all_( self.stdCtx )
         self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( err, Exception )
 
-        # should be the same as And
-        and_ = And( many[0], many[1] )
-        and_ = And( and_, many[2] )
-        and_ = And( and_, many[3] )
-        ans_, err_ = and_( ctx )
+        and_ = And( many[ 0 ], many[ 1 ] )
+        and_ = And( and_, many[ 2 ] )
+        and_ = And( and_, many[ 3 ] )
+
+        ans_, err_ = and_( self.stdCtx )
         self.assertEqual( ans, ans_ )
         self.assertEqual( err, err_ )
 
     def test_all_unknown_fuzzy_on( self ):
-        ctx = Ctx( { "price": 100 }, fuzzy = True )
-        many = []
-        many.append( Btw( 100, "price", 200 ) )
-        many.append( MockCriteria( Criteria.UNKNOWN, KeyError( "Address not found" ) ) )
-        many.append( Btw( 50, "price", 101 ) )
+        many = [ self.price_btw_100_200, self.unknown_error, self.price_btw_50_101 ]
         all_ = All( *many )
-        ans, err = all_( ctx )
+
+        ans, err = all_( self.fuzzyCtx )
         self.assertTrue( ans )
         self.assertIsInstance( err, KeyError )
 
-        # should be the same as And
-        and_ = And( many[0], many[1] )
-        and_ = And( and_, many[2] )
-        ans_, err_ = and_( ctx )
+        and_ = And( And( many[ 0 ], many[ 1 ] ), many[ 2 ] )
+        ans_, err_ = and_( self.fuzzyCtx )
         self.assertEqual( ans, ans_ )
         self.assertEqual( err, err_ )
 
     def test_all_error_fuzzy_off( self ):
-        ctx = Ctx( { "price": 100 } )
-        many = []
-        many.append( Btw( 100, "price", 200 ) )
-        many.append( MockCriteria( None, KeyError( "Address not found" ) ) )
-        many.append( Btw( 50, "price", 101 ) )
+        many = [ self.price_btw_100_200, self.error_error, self.price_btw_50_101 ]
         all_ = All( *many )
-        ans, err = all_( ctx )
+        ans, err = all_( self.stdCtx )
         self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( err, KeyError )
 
         # should be the same as And
         and_ = And( many[0], many[1] )
         and_ = And( and_, many[2] )
-        ans_, err_ = and_( ctx )
+        ans_, err_ = and_( self.stdCtx )
         self.assertEqual( ans, ans_ )
         self.assertEqual( err, err_ )
 
-    def test_all_error_fuzzy_on( self ):
-        ctx = Ctx( { "price": 100 }, fuzzy = True )
-        many = []
-        many.append( Btw( 100, "price", 200 ) )
-        many.append( MockCriteria( None, KeyError( "Address not found" ) ) )
-        many.append( Btw( 50, "price", 101 ) )
+    def test_all_error_fuzzy_on_with_3_criteria( self ):
+        many = [ self.price_btw_100_200, self.none_error, self.price_btw_50_101 ]
         all_ = All( *many )
-        ans, err = all_( ctx )
+
+        ans, err = all_( self.fuzzyCtx )
         self.assertTrue( ans )
-        self.assertIsNone( err )
+        self.assertIsInstance( err, KeyError )
 
         # should be the same as And
-        and_ = And( many[0], many[1] )
-        and_ = And( and_, many[2] )
-        ans_, err_ = and_( ctx )
+        and_ = And( And( many[ 0 ], many[ 1 ] ), many[ 2 ] )
+        ans_, err_ = and_( self.fuzzyCtx )
         self.assertEqual( ans, ans_ )
         self.assertEqual( err, err_ )
 
     def test_all_error_fuzzy_on( self ):
-        ctx = Ctx( { "price": 100 }, fuzzy = True )
-        many = []
-        many.append( MockCriteria( None, KeyError( "Address not found" ) ) )
+        many = [ MockCriteria( None, KeyError( "Address not found" ) )  ]
         all_ = All( *many )
-        ans, err = all_( ctx )
+
+        ans, err = all_( self.fuzzyCtx )
         self.assertEqual( ans, Criteria.UNKNOWN )
         self.assertIsInstance( err, KeyError )
 

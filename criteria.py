@@ -22,20 +22,21 @@ def quote( obj ):
 def safe_monad( func, *args, **kwargs ):
     try:
         obj = func( *args, **kwargs )
-        return ( obj, None )
 
     except Exception as err:
         return ( None, err )
 
+    else:
+        return ( obj, None )
+
 
 def safe( fuzzy, func, *args, **kwargs ):
     ans, err = safe_monad( func, *args, **kwargs )
+
     if err is None:
-        """ if err is None, then it succeeded """
         return ( ans, None )
 
     else:
-        """ otherwise, return unknown if fuzzy, else error """
         return ( Criteria.UNKNOWN, err ) if fuzzy else ( Criteria.ERROR, err )
 
 
@@ -52,7 +53,7 @@ class Criteria( object ):
         raise NotImplementedError
 
     def fuzzy( self, ctx ):
-        return ctx.fuzzy()
+        return ctx.fuzzy
 
     def __init__( self ):
         self._stack = []
@@ -147,47 +148,38 @@ class Criteria( object ):
 
 
 class Ctx( object ):
-    """ Object that holds the target object evaluated by Criteria """
+
 
     @property
     def target( self ):
-        """ real target object subject to comparison by criteria """
         return self._target
 
     @target.setter
     def target( self, target ):
-        """ real target object subject to comparison by criteria """
         self._target = target
 
-    def __init__( self, target, fuzzy = None ):
-        """ real target object subject to comparison by criteria """
+    @property
+    def fuzzy( self ):
+        return self._fuzzy
+
+    @fuzzy.setter
+    def fuzzy( self, fuzzy ):
+        self._fuzzy = fuzzy
+
+    def __init__( self, target, fuzzy = False ):
         self._target = target
         self._fuzzy = fuzzy
 
     def __getitem__( self, item ):
-        """ simple way of getting the info out of target object """
-
         if hasattr( self.target, "__getitem__" ) and item in self.target:
-            """ test dict like object """
             return self.target[ item ]
 
         elif hasattr( self.target, item ):
-            """ it can work with either field, property or method """
             obj = getattr( self.target, item )
             return obj() if callable( obj ) else obj
 
         else:
-            """ not sure how to get info out of target """
             raise KeyError( "Cannot get %s out of object of type %s" % ( item, type( self.target ) ) )
-
-    def fuzzy( self ):
-        """ return either True or False """
-        if self._fuzzy is None:
-            ans, err = safe_monad( access, self, "fuzzy" )
-            return ans if err is None else False
-        else:
-            """ if set, either True or False, use it from ctx """
-            return self._fuzzy
 
 
 class Bool( Criteria ):
@@ -208,10 +200,7 @@ class Bool( Criteria ):
         return ( self.one, None )
 
 
-# true criteria
-True_ = Bool( True )
-
-# false criteria
+True_  = Bool( True )
 False_ = Bool( False )
 
 
