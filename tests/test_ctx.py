@@ -2,26 +2,28 @@ import unittest
 from unittest import TestCase
 from criteria import Ctx
 from tests.test_helper import Person
+from tests.test_all import BaseCriteriaTest
 
-class TestCtx( TestCase ):
+
+class TestCtx( BaseCriteriaTest ):
 
 
     def test_targets( self ):
         """ target can be a dict or any object """
-        for target in [ Person( "John", "Duke", True ), { "first_name": "John", "last_name": "Duke", "fuzzy": True } ]:
-            ctx = Ctx( target )
+        for target, fuzzy in [ ( Person( "John", "Duke", True ), False ), ( { "first_name": "John", "last_name": "Duke" }, True ) ]:
+            ctx = Ctx( target, fuzzy )
             self.assertEqual( ctx[ "first_name" ], "John" )
             self.assertEqual( ctx[ "last_name" ], "Duke" )
-            self.assertTrue( ctx[ "fuzzy" ] )
+            self.assertEqual( ctx.fuzzy, fuzzy )
 
     def test_fuzzy( self ):
         """ access info from target will sometimes result in error """
         with self.assertRaises( KeyError ):
-            ctx = Ctx( { "first_name": "John", "last_name": "Duke" } )
-            ctx[ "fuzzy" ]
+            self.john_duke
+            self.john_duke[ "credit" ]
 
         """ fuzzy however is safe guarded by ctx """
-        self.assertFalse( ctx.fuzzy() )
+        self.assertTrue( self.john_duke.fuzzy )
 
 
 if __name__ == '__main__':

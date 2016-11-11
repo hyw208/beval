@@ -1,59 +1,35 @@
 import unittest
 from unittest import TestCase
 from criteria import Criteria, Ctx, Eq
+from tests.test_all import BaseCriteriaTest
 
-class TestEq( TestCase ):
 
-    def setUp( self ):
-        """ create a dummy target """
-        self.target = { "first_name": "John", "last_name": "Duke", "fuzzy": True }
+class TestEq( BaseCriteriaTest ):
+
 
     def test_eq_positive( self ):
-        """ set up a criteria, checking if the first_name of the target is "John" """
         eq = Eq( "first_name", "John" )
-
-        """ wrap inside ctx """
-        ctx = Ctx( self.target )
-
-        """ test """
-        ans, _ = eq( ctx )
+        ans, _ = eq( self.john_duke )
         self.assertTrue( ans )
 
     def test_eq_negative( self ):
-        """ set up a criteria, checking if the first_name of the target is "John" """
         eq = Eq( "first_name", "Paul" )
-
-        """ wrap inside ctx """
-        ctx = Ctx( self.target )
-
-        """ test """
-        ans, err = eq( ctx )
+        ans, err = eq( self.john_duke )
         self.assertFalse( ans )
         self.assertIsNone( err )
 
     def test_eq_unknown_fuzzy_true( self ):
-        """ """
         eq = Eq( "middle_name", "Joe" )
-
-        """ wrap inside ctx """
-        ctx = Ctx( self.target )
-
-        """ test """
-        ans, error = eq( ctx )
+        ans, error = eq( self.john_duke )
         self.assertEqual( ans, Criteria.UNKNOWN )
         self.assertIsInstance( error, KeyError )
 
     def test_eq_unknown_fuzzy_false( self ):
-        """ """
+        import copy
         eq = Eq( "middle_name", "Joe" )
-
-        """ wrap inside ctx """
-        target = self.target.copy()
-        target[ "fuzzy" ] = False
-        ctx = Ctx( target )
-
-        """ test """
-        ans, error = eq( ctx )
+        john_duke = copy.copy( self.john_duke )
+        john_duke.fuzzy = False
+        ans, error = eq( john_duke )
         self.assertEqual( ans, Criteria.ERROR )
         self.assertIsInstance( error, KeyError )
 
@@ -69,6 +45,7 @@ class TestEq( TestCase ):
         eq = Eq( "pass", True )
         text = str( eq )
         self.assertEqual( text, "pass == True" )
+
 
 if __name__ == '__main__':
     unittest.main()
