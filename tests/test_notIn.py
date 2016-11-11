@@ -3,7 +3,6 @@ from unittest import TestCase
 from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And, Not, In, NotIn
 
 
-
 class TestNotIn( TestCase ):
 
 
@@ -22,9 +21,6 @@ class TestNotIn( TestCase ):
         ans, err = notIn_( Ctx( { "Rating": "BB" } ) )
         self.assertTrue( ans )
         self.assertIsNone( err )
-
-    def test_in_error( self ):
-        pass
 
 
 if __name__ == '__main__':
