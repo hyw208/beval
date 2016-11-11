@@ -1,5 +1,6 @@
-import operator
 import ast
+import numbers
+import operator
 
 
 OP_TO_TEXT_MAP = {
@@ -11,567 +12,562 @@ OP_TO_TEXT_MAP = {
 }
 
 
-def quote( obj ):
-    if isinstance( obj, str ):
+def quote(obj):
+    if isinstance(obj, str):
         return "'%s'" % obj
-
     else:
         return "%s" % obj
 
 
-def safe_monad( func, *args, **kwargs ):
+def safe_monad(func, *args, **kwargs):
     try:
-        obj = func( *args, **kwargs )
-
+        obj = func(*args, **kwargs)
     except Exception as err:
-        return ( None, err )
-
+        return None, err
     else:
-        return ( obj, None )
+        return obj, None
 
 
-def safe( fuzzy, func, *args, **kwargs ):
-    ans, err = safe_monad( func, *args, **kwargs )
+def safe(fuzzy, func, *args, **kwargs):
+    (obj, err) = safe_monad(func, *args, **kwargs)
 
     if err is None:
-        return ( ans, None )
-
+        return obj, None
     else:
-        return ( Criteria.UNKNOWN, err ) if fuzzy else ( Criteria.ERROR, err )
+        return Criteria.UNKNOWN if fuzzy else Criteria.ERROR, err
 
 
-def access( ctx, item ):
-    return ctx[ item ]
+def access(ctx, key):
+    return ctx[key]
 
 
-class Criteria( object ):
+class Criteria(object):
 
-    UNKNOWN = "__UNKNOWN__"
-    ERROR   = "__ERROR__"
+    UNKNOWN = '__UNKNOWN__'
+    ERROR = '__ERROR__'
 
-    def __call__( self, ctx ):
+    def __call__(self, ctx):
         raise NotImplementedError
 
-    def fuzzy( self, ctx ):
+    def fuzzy(self, ctx):
         return ctx.fuzzy
 
-    def __init__( self ):
+    def __init__(self):
         self._stack = []
 
-    def size( self ):
-        return len( self._stack )
+    def size(self):
+        return len(self._stack)
 
-    def _push( self, item ):
-        self._stack.append( item )
+    def _push(self, item):
+        self._stack.append(item)
 
-    def _pop( self ):
+    def _pop(self):
         return self._stack.pop()
 
-    def Eq( self, left, right ):
-        c = Eq( left, right )
-        self._push( c )
+    def Eq(self, left, right):
+        c = Eq(left, right)
+        self._push(c)
         return self
 
-    def Ne( self, left, right ):
-        c = Ne( left, right )
-        self._push( c )
+    def NotEq(self, left, right):
+        c = NotEq(left, right)
+        self._push(c)
         return self
 
-    def Le( self, left, right ):
-        c = Le( left, right )
-        self._push( c )
+    def LtE(self, left, right):
+        c = LtE(left, right)
+        self._push(c)
         return self
 
-    def Lt( self, left, right ):
-        c = Lt( left, right )
-        self._push( c )
+    def Lt(self, left, right):
+        c = Lt(left, right)
+        self._push(c)
         return self
 
-    def Ge( self, left, right ):
-        c = Ge( left, right )
-        self._push( c )
+    def GtE(self, left, right):
+        c = GtE(left, right)
+        self._push(c)
         return self
 
-    def Gt( self, left, right ):
-        c = Gt( left, right )
-        self._push( c )
+    def Gt(self, left, right):
+        c = Gt(left, right)
+        self._push(c)
         return self
 
-    def Btw( self, lower, one, upper ):
-        c = Btw( lower, one, upper )
-        self._push( c )
+    def Between(self, lower, one, upper):
+        c = Between(lower, one, upper)
+        self._push(c)
         return self
 
-    def In( self, left, *right ):
-        c = In( left, *right )
-        self._push( c )
+    def In(self, left, *right):
+        c = In(left, *right)
+        self._push(c)
         return self
 
-    def NotIn( self, left, *right ):
-        c = NotIn( left, *right )
-        self._push( c )
+    def NotIn(self, left, *right):
+        c = NotIn(left, *right)
+        self._push(c)
         return self
 
-    def And( self ):
-        r, l = self._pop(), self._pop()
-        c = And( l, r )
-        self._push( c )
+    def And(self):
+        (r, l) = (self._pop(), self._pop())
+        c = And(l, r)
+        self._push(c)
         return self
 
-    def Or( self ):
-        r, l = self._pop(), self._pop()
-        c = Or( l, r )
-        self._push( c )
+    def Or(self):
+        (r, l) = (self._pop(), self._pop())
+        c = Or(l, r)
+        self._push(c)
         return self
 
-    def All( self ):
-        c = All( *self._stack )
-        self._stack = [ c ]
+    def All(self):
+        c = All(*self._stack)
+        self._stack = [c]
         return self
 
-    def Any( self ):
-        c = Any( *self._stack )
-        self._stack = [ c ]
+    def Any(self):
+        c = Any(*self._stack)
+        self._stack = [c]
         return self
 
-    def Not( self ):
-        c = Not( self._pop() )
-        self._push( c )
+    def Not(self):
+        c = Not(self._pop())
+        self._push(c)
         return self
 
-    def Build( self ):
+    def Done(self):
         if self.size() != 1:
-            raise SyntaxError( "There are more items on stack: %d" % self.size() )
+            raise SyntaxError('more items on stack still, %s' % self.size())
 
-        else:
-            return self._stack.pop()
-
-
-class Ctx( object ):
+        return self._stack.pop()
 
 
-    @property
-    def target( self ):
-        return self._target
+class AbstractCtx(object):
 
-    @target.setter
-    def target( self, target ):
-        self._target = target
+    def __getitem__(self, key):
+        (obj, err) = safe_monad(self.key, key)
+        if err is None:
+            return obj
 
-    @property
-    def fuzzy( self ):
-        return self._fuzzy
+        if isinstance(key, bool) or isinstance(key, numbers.Number):
+            return key
 
-    @fuzzy.setter
-    def fuzzy( self, fuzzy ):
-        self._fuzzy = fuzzy
+        (obj, err) = safe_monad(ast.literal_eval, key)
+        if err is None:
+            return obj
 
-    def __init__( self, target, fuzzy = False ):
-        self._target = target
-        self._fuzzy = fuzzy
+        raise KeyError('cannot find item %s' % key)
 
-    def __getitem__( self, item ):
-        if hasattr( self.target, "__getitem__" ) and item in self.target:
-            return self.target[ item ]
-
-        elif hasattr( self.target, item ):
-            obj = getattr( self.target, item )
-            return obj() if callable( obj ) else obj
-
-        else:
-            raise KeyError( "Cannot get %s out of object of type %s" % ( item, type( self.target ) ) )
+    def key(self, key):
+        raise NotImplementedError
 
 
-class Bool( Criteria ):
-
+class Ctx(AbstractCtx):
 
     @property
-    def one( self ):
+    def one(self):
         return self._one
 
-    @one.setter
-    def one( self, one ):
+    @property
+    def fuzzy(self):
+        return self._fuzzy
+
+    def __init__(self, one, fuzzy=False):
         self._one = one
+        self._fuzzy = fuzzy
 
-    def __init__( self, one = False ):
-        self._one = one
+    def key(self, key):
+        if hasattr(self._one, "__getitem__") and key in self._one:
+            return self._one[key]
 
-    def __call__( self, ctx ):
-        return ( self.one, None )
-
-
-True_  = Bool( True )
-False_ = Bool( False )
-
-
-class Eq( Criteria ):
-
-
-    @property
-    def left( self ):
-        return self._left
-
-    @left.setter
-    def left( self, left ):
-        self._left = left
-
-    @property
-    def right( self ):
-        return self._right
-
-    @right.setter
-    def right( self, right ):
-        self._right = right
-
-    @property
-    def op( self ):
-        return self._op
-
-    @op.setter
-    def op( self, op ):
-        self._op = op
-
-    def __init__( self, left, right, op = operator.eq ):
-        self._left = left
-        self._right = right
-        self._op = op
-
-    def __call__( self, ctx ):
-        obj, err = safe_monad( access, ctx, self.left )
-
-        if err is None:
-            obj_, err_ = safe( self.fuzzy( ctx ), self.op, obj, self.right )
-            """
-            True
-            False
-            Criteria.UNKNOWN
-            Criteria.ERROR
-            """
-            return ( obj_, err_ )
+        elif isinstance(key, str) and hasattr(self._one, key):
+            obj = getattr(self._one, key)
+            return obj() if callable(obj) else obj
 
         else:
-            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( Criteria.ERROR, err )
-
-    def __str__( self ):
-        text = "%s %s %s" % ( self.left, OP_TO_TEXT_MAP[ self.op ], quote( self.right ) )
-        return text
+            raise KeyError("cannot find item %s" % key)
 
 
-class Ne( Eq ):
-
-
-    def __init__( self, left, right ):
-        super( Ne, self ).__init__( left, right, operator.ne )
-
-
-class Lt( Eq ):
-
-
-    def __init__( self, left, right ):
-        super( Lt, self ).__init__( left, right, operator.lt )
-
-
-class Le( Eq ):
-
-
-    def __init__( self, left, right ):
-        super( Le, self ).__init__( left, right, operator.le )
-
-
-class Gt( Eq ):
-
-
-    def __init__( self, left, right ):
-        super( Gt, self ).__init__( left, right, operator.gt )
-
-
-class Ge( Eq ):
-
-
-    def __init__( self, left, right ):
-        super( Ge, self ).__init__( left, right, operator.ge )
-
-
-class Btw( Criteria ):
-
+class Bool(Criteria):
 
     @property
-    def lower( self ):
+    def one(self):
+        return self._one
+
+    def __init__(self, one):
+        if not (isinstance(one, str) or isinstance(one, bool)):
+            raise TypeError("%s not supported" % type(one))
+
+        self._one = one
+
+    def __call__(self, ctx):
+        (obj, err) = safe_monad(access, ctx, self._one)
+
+        if err is None:
+            if isinstance(obj, bool):
+                return obj, None
+
+            elif isinstance(obj, str) and obj.lower() in ('true', 'false',):
+                return True if obj.lower() == 'true' else False, None
+
+            else:
+                return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, TypeError("%s not supported" % type(obj))
+
+        else:
+            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
+
+
+cTrue = Bool(True)
+
+cFalse = Bool(False)
+
+
+class Eq(Criteria):
+
+    @property
+    def left(self):
+        return self._left
+
+    @property
+    def right(self):
+        return self._right
+
+    @property
+    def op(self):
+        return self._op
+
+    def __init__(self, left, right, op=operator.eq):
+        self._left = left
+        self._right = right
+        self._op = op
+
+    def __call__(self, ctx):
+        (obj, err) = safe_monad(access, ctx, self._left)
+
+        if err is None:
+            (obj_, err_) = safe(self.fuzzy(ctx), self._op, obj, self._right)
+            return obj_, err_
+
+        else:
+            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
+
+    def __str__(self):
+        return "%s %s %s" % (self._left, OP_TO_TEXT_MAP[self._op], quote(self._right))
+
+
+class NotEq(Eq):
+
+    def __init__(self, left, right):
+        super(NotEq, self).__init__(left, right, operator.ne)
+
+
+class Lt(Eq):
+
+    def __init__(self, left, right):
+        super(Lt, self).__init__(left, right, operator.lt)
+
+
+class LtE(Eq):
+
+    def __init__(self, left, right):
+        super(LtE, self).__init__(left, right, operator.le)
+
+
+class Gt(Eq):
+
+    def __init__(self, left, right):
+        super(Gt, self).__init__(left, right, operator.gt)
+
+
+class GtE(Eq):
+
+    def __init__(self, left, right):
+        super(GtE, self).__init__(left, right, operator.ge)
+
+
+class Between(Criteria):
+
+    @property
+    def lower(self):
         return self._lower
 
     @property
-    def lowerOp( self ):
-        return self._lowerOp
+    def lower_op(self):
+        return self._lower_op
 
     @property
-    def one( self ):
+    def one(self):
         return self._one
 
     @property
-    def upperOp( self ):
-        return self._upperOp
+    def upper_op(self):
+        return self._upper_op
 
     @property
-    def upper( self ):
+    def upper(self):
         return self._upper
 
-    def __init__( self, lower, one, upper, lowerOp = operator.le, upperOp = operator.lt ):
+    def __init__(self, lower, one, upper, lower_op=operator.le, upper_op=operator.lt):
         self._lower = lower
-        self._lowerOp = lowerOp
+        self._lower_op = lower_op
         self._one = one
-        self._upperOp = upperOp
+        self._upper_op = upper_op
         self._upper = upper
 
-    def __call__( self, ctx ):
-        obj, err = safe_monad( access, ctx, self.one )
+    def __call__(self, ctx):
+        (obj, err) = safe_monad(access, ctx, self._one)
 
         if err is None:
-            obj_, err_ = safe( self.fuzzy( ctx ), self.lowerOp, self.lower, obj )
-            if obj_ == True:
-                obj2_, err2_ = safe( self.fuzzy( ctx ), self.upperOp, obj, self.upper )
-                return ( obj2_, err2_ )
+            (obj_, err_) = safe(self.fuzzy(ctx), self._lower_op, self._lower, obj)
+
+            if obj_ in (True, ):
+                (obj2_, err2_) = safe(self.fuzzy(ctx), self._upper_op, obj, self._upper)
+                return obj2_, err2_
 
             else:
-                return ( obj_, err_ )
+                return obj_, err_
         else:
-            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( Criteria.ERROR, err )
+            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
 
 
-class In( Eq ):
+class In(Eq):
 
+    def __init__(self, left, *right):
+        super(In, self).__init__(left, right)
 
-    def __init__( self, left, *right ):
-        super( In, self ).__init__( left, right )
-
-    def __call__( self, ctx ):
-        obj, err = safe_monad( access, ctx, self.left )
+    def __call__(self, ctx):
+        (obj, err) = safe_monad(access, ctx, self._left)
 
         if err is None:
-            negatives = 0
-            firstError = None
+            negative = 0
+            first_error = None
+
             for one in self.right:
-                obj_, err_ = safe_monad( self.op, obj, one )
+                (obj_, err_) = safe_monad(self._op, obj, one)
 
-                if obj_ == True:
-                    return ( obj_, firstError or err_ )
+                if obj_ in (True,):
+                    return obj_, first_error or err_
 
-                elif obj_ == False:
-                    negatives += 1
-                    firstError = firstError or err_
+                elif obj_ in (False,):
+                    negative += 1
+                    first_error = first_error or err_
 
                 else:
-                    if self.fuzzy( ctx ):
-                        firstError = firstError or err_
+                    if self.fuzzy(ctx):
+                        first_error = first_error or err_
 
                     else:
-                        return ( Criteria.ERROR, firstError or err_ )
+                        return Criteria.ERROR, first_error or err_
 
-            """ no positive hit """
-            if negatives > 0:
-                return ( False, firstError )
+            if negative > 0:
+                return False, first_error
 
             else:
-                return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( Criteria.ERROR, firstError )
+                return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, first_error
 
         else:
-            return ( Criteria.UNKNOWN, err ) if self.fuzzy( ctx ) else ( Criteria.ERROR, err )
+            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
 
 
+class NotIn(In):
 
-class NotIn( In ):
+    def __init__(self, left, *right):
+        super(NotIn, self).__init__(left, *right)
 
-
-    def __init__( self, left, *right ):
-        super( NotIn, self ).__init__( left, *right )
-
-    def __call__( self, ctx ):
-        ans, err = super( NotIn, self ).__call__( ctx )
-        """
-        True
-        False
-        Criteria.UNKNOWN
-        Criteria.ERROR
-        """
-        if ans in ( True, False ):
-            return ( not ans, err )
-
-        else:
-            return ( ans, err )
+    def __call__(self, ctx):
+        (obj, err) = super(NotIn, self).__call__(ctx)
+        return not obj if obj in (True, False,) else obj, err
 
 
-class All( Criteria ):
-
+class All(Criteria):
 
     @property
-    def many( self ):
+    def many(self):
         return self._many
 
-    @many.setter
-    def many( self, many ):
+    def __init__(self, *many):
+        for one in many:
+            if not isinstance(one, Criteria):
+                raise TypeError("%s not supported" % type(one))
+
         self._many = many
 
-    def __init__( self, *many ):
-        self._many = many
+    def __call__(self, ctx):
+        positive = 0
+        first_error = None
 
-    def __call__( self, ctx ):
-        positives = 0
-        firstError = None
-        for one in self.many:
-            ans, err = one( ctx )
-            """
-            True
-            False
-            Criteria.UNKNOWN
-            Criteria.ERROR
-            """
-            if ans == True:
-                positives += 1
-                firstError = firstError or err
+        for one in self._many:
+            (obj, err) = one(ctx)
 
-            elif ans == False:
-                return ( ans, firstError or err )
+            if obj in (True,):
+                positive += 1
+                first_error = first_error or err
+
+            elif obj in (False,):
+                return obj, first_error or err
 
             else:
-                if self.fuzzy( ctx ):
-                    firstError = firstError or err
+                if self.fuzzy(ctx):
+                    first_error = first_error or err
 
                 else:
-                    return ( Criteria.ERROR, firstError or err )
+                    return Criteria.ERROR, first_error or err
 
-        if positives > 0:
-            return ( True, firstError )
+        if positive > 0:
+            return True, first_error
 
         else:
-            return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( Criteria.ERROR, firstError )
+            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, first_error
 
 
-class Any( All ):
+class Any(All):
 
+    def __call__(self, ctx):
+        negative = 0
+        first_error = None
 
-    def __call__( self, ctx ):
-        negatives = 0
-        firstError = None
-        for one in self.many:
-            ans, err = one( ctx )
-            """
-            True
-            False
-            Criteria.UNKNOWN
-            Criteria.ERROR
-            """
-            if ans == True:
-                return ( ans, firstError or err )
+        for one in self._many:
+            (obj, err) = one(ctx)
 
-            elif ans == False:
-                negatives += 1
-                firstError = firstError or err
+            if obj in (True,):
+                return obj, first_error or err
+
+            elif obj in (False,):
+                negative += 1
+                first_error = first_error or err
 
             else:
-                if self.fuzzy( ctx ):
-                    firstError = firstError or err
+                if self.fuzzy(ctx):
+                    first_error = first_error or err
 
                 else:
-                    return ( Criteria.ERROR, firstError or err )
+                    return Criteria.ERROR, first_error or err
 
-        if negatives > 0:
-            return ( False, firstError )
-
-        else:
-            return ( Criteria.UNKNOWN, firstError ) if self.fuzzy( ctx ) else ( Criteria.ERROR, firstError )
-
-
-class And( All ):
-
-
-    @property
-    def left( self ):
-        return self._many[ 0 ]
-
-    @property
-    def right( self ):
-        return self._many[ 1 ]
-
-    def __init__( self, left, right ):
-        super( And, self ).__init__( left, right )
-
-
-class Or( Any ):
-
-
-    @property
-    def left( self ):
-        return self._many[ 0 ]
-
-    @property
-    def right( self ):
-        return self._many[ 1 ]
-
-    def __init__( self, left, right ):
-        super( Or, self ).__init__( left, right )
-
-
-class Not( Bool ):
-
-
-    def __init__( self, one ):
-        super( Not, self ).__init__( one )
-
-    def __call__( self, ctx ):
-        ans, err = self.one( ctx )
-        """
-        True
-        False
-        Criteria.UNKNOWN
-        Criteria.ERROR
-        """
-        if ans in ( True, False ):
-            return ( not ans, err )
+        if negative > 0:
+            return False, first_error
 
         else:
-            return ( ans, err )
+            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, first_error
+
+
+class And(All):
+
+    @property
+    def left(self):
+        return self._many[0]
+
+    @property
+    def right(self):
+        return self._many[1]
+
+    def __init__(self, left, right):
+        super(And, self).__init__(left, right)
+
+
+class Or(Any):
+
+    @property
+    def left(self):
+        return self._many[0]
+
+    @property
+    def right(self):
+        return self._many[1]
+
+    def __init__(self, left, right):
+        super(Or, self).__init__(left, right)
+
+
+class Not(Criteria):
+
+    @property
+    def one(self):
+        return self._one
+
+    def __init__(self, one):
+        if not isinstance(one, Criteria):
+            raise TypeError("%s not supported" % type(one))
+
+        self._one = one
+
+    def __call__(self, ctx):
+        (obj, err) = self._one(ctx)
+        return not obj if obj in (True, False,) else obj, err
 
 
 AST_OP_TO_CRITERIA_MAP = {
-    ast.LtE: Le,
-
+    ast.Eq: Eq,
+    ast.NotEq: NotEq,
+    ast.Lt: Lt,
+    ast.LtE: LtE,
+    ast.Gt: Gt,
+    ast.GtE: GtE,
+    "Between": Between,
+    ast.In: In,
+    ast.NotIn: NotIn,
 }
 
 
-def visit( node, data ):
-    if isinstance( node, ast.Expression ):
-        visit( node.body, data )
+def toCriteria(text):
+    data = []
+    node = ast.parse(text, mode='eval')
+    visit(node, data)
+    return data.pop()
 
-    if isinstance( node, ast.BoolOp ): # and, or
-        print
 
-    if isinstance( node, ast.Compare ):
-        name = visit( node.left, data )
+def visit(node, data):
+    if isinstance(node, ast.Expression):
+        visit(node.body, data)
+        if len(data) != 1:
+            raise SyntaxError("do not support multiple expression nodes, %s" % len(data))
 
-        if len( node.ops ) == 1:
-            op = node.ops[ 0 ]
-            comparator = node.comparators[ 0 ]
-            print
+        obj = data.pop()
+        data.append(obj if isinstance(obj, Criteria) else Bool(obj))
+        return
 
-        elif len( node.ops ) == 2:
-            lowerOp = node.ops[ 0 ]
-            lower = node.comparators[ 0 ]
+    if isinstance(node, ast.BoolOp):
+        raise NotImplementedError
 
-            upperOp = node.ops[ 1 ]
-            upper = node.comparator[ 1 ]
+    if isinstance(node, ast.Compare):
+        visit(node.left, data)
+        left = data.pop()
+
+        if len(node.ops):
+            op = node.ops[0]
+            cls = AST_OP_TO_CRITERIA_MAP[type(op)]
+
+            comparator = node.comparators[0]
+            visit(comparator, data)
+            right = data.pop()
+
+            c = cls(left, right)
+            data.append(c)
+            return
+
+        elif len(node.ops) == 2:
+            lowerOp = node.ops[0]
+            lower = node.comparators[0]
+
+            upperOp = node.ops[1]
+            upper = node.comparator[1]
             print
 
         else:
-            raise Exception( "do not support ast.Compare with more than 2 ops: %s" % node )
+            raise Exception("do not support ast.Compare with more than 2 ops: %s" % node)
 
+    if isinstance(node, ast.UnaryOp):
+        raise NotImplementedError
 
-    if isinstance( node, ast.UnaryOp ):
-        # not
-        pass
+    if isinstance(node, ast.Num):
+        data.append(node.n)
+        return
 
-    if isinstance( node, ast.Str ):
-        data.append( node.s )
+    if isinstance(node, ast.Str):
+        data.append(node.s)
+        return
 
-    if isinstance( node, ast.Name ):
+    if isinstance(node, ast.Name):
         if node.id == 'True':
             id = True
 
@@ -581,4 +577,5 @@ def visit( node, data ):
         else:
             id = node.id
 
-        data.append( id )
+        data.append(id)
+        return
