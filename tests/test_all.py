@@ -4,11 +4,12 @@ from criteria import Criteria, Ctx, Le, Lt, Btw, All, And, True_
 from tests.test_helper import MockCriteria
 
 
-class TestAll( TestCase ):
+class BaseCriteriaTest( TestCase ):
 
 
     def setUp( self ):
         self.target = { "price": 100 }
+        self.john_duke = Ctx( { "first_name": "John", "last_name": "Duke", "address": "New York, NY", "age": 31, "hair": "curly" }, True )
 
         self.stdCtx = Ctx( self.target )
         self.fuzzyCtx = Ctx( self.target, fuzzy = True )
@@ -20,8 +21,16 @@ class TestAll( TestCase ):
 
         self.unknown_exception = MockCriteria( Criteria.UNKNOWN, Exception( "Address not found" ) )
         self.unknown_error = MockCriteria( Criteria.UNKNOWN, KeyError( "Address not found" ) )
+        self.unknown_none = MockCriteria( Criteria.UNKNOWN, None )
         self.error_error = MockCriteria( Criteria.ERROR, KeyError( "Address not found" ) )
         self.none_error = MockCriteria( None, KeyError( "Address not found" ) )
+        self.none_error_rf = MockCriteria( None, KeyError( "right first" ) )
+        self.true_key_error_lf = MockCriteria( True, KeyError( "left first" ) )
+        self.true_key_error_rf = MockCriteria( True, KeyError( "right first" ) )
+        self.true_key_error_r2nd = MockCriteria( True, KeyError( "left 2nd" ) )
+
+class TestAll( BaseCriteriaTest ):
+
 
     def test_all_positive( self ):
         many = [ self.price_btw_100_200, self.price_btw_99_101, self.price_btw_50_101 ]
@@ -90,8 +99,8 @@ class TestAll( TestCase ):
         self.assertIsInstance( err, KeyError )
 
         # should be the same as And
-        and_ = And( many[0], many[1] )
-        and_ = And( and_, many[2] )
+        and_ = And( many[ 0 ], many[ 1 ] )
+        and_ = And( and_, many[ 2 ] )
         ans_, err_ = and_( self.stdCtx )
         self.assertEqual( ans, ans_ )
         self.assertEqual( err, err_ )
@@ -111,7 +120,7 @@ class TestAll( TestCase ):
         self.assertEqual( err, err_ )
 
     def test_all_error_fuzzy_on( self ):
-        many = [ MockCriteria( None, KeyError( "Address not found" ) )  ]
+        many = [ self.none_error ]
         all_ = All( *many )
 
         ans, err = all_( self.fuzzyCtx )
