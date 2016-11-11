@@ -12,7 +12,9 @@ class BaseCriteriaTest( TestCase ):
         self.john_duke = Ctx( { "first_name": "John", "last_name": "Duke", "address": "New York, NY", "age": 31, "hair": "curly" }, True )
 
         self.stdCtx = Ctx( self.target )
+        self.stdEmptyCtx = Ctx( {} )
         self.fuzzyCtx = Ctx( self.target, fuzzy = True )
+        self.fuzzyEmptyCtx = Ctx( {}, fuzzy = True )
 
         self.price_btw_100_200 = Btw( 100, "price", 200 )
         self.price_btw_99_101 = Btw( 99, "price", 101 )

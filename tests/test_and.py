@@ -4,6 +4,7 @@ from criteria import Criteria, Ctx, Eq, Ne, True_, False_, And, All
 from tests.test_helper import MockCriteria
 from tests.test_all import BaseCriteriaTest
 
+
 class TestAnd( BaseCriteriaTest ):
 
 
