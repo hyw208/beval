@@ -10,11 +10,12 @@ class TestVisit(BaseCriteriaTest):
         std_ctx = Ctx(target)
 
         tests = []
-        tests.append(('True', 'True', bool, True, None))
-        tests.append(("'True'", 'True', bool, True, None))
+        tests.append(('True', True, bool, True, None))
+        tests.append(('"True"', 'True', bool, True, None))
         tests.append(('honest', 'honest', bool, True, None))
         tests.append(('tall', 'tall', bool, True, None))
-        tests.append(('False', 'False', bool, False, None))
+        tests.append(('False', False, bool, False, None))
+        tests.append(('"False"', 'False', bool, False, None))
         tests.append(('famous', 'famous', type(Criteria.ERROR), Criteria.ERROR, KeyError))
 
         for text_, equal_, type_, ans_, err_ in tests:
@@ -31,12 +32,44 @@ class TestVisit(BaseCriteriaTest):
                 self.assertIsNone(err)
 
     def test_true_eq_true(self):
+        """
+        criteria.left is always turned into real True bool during evaluation
+        """
         text = "True == 'True'"
         c = toCriteria(text)
         self.assertIsInstance(c, Criteria)
-
+        self.assertEqual(c.left, True)
+        self.assertEqual(c.right, "True")
         (ans, err) = c(self.stdEmptyCtx)
-        print
+        self.assertFalse(ans)
+        self.assertIsNone(err)
+
+        text = "'True' == 'True'"
+        c = toCriteria(text)
+        self.assertIsInstance(c, Criteria)
+        self.assertEqual(c.left, "True")
+        self.assertEqual(c.right, "True")
+        (ans, err) = c(self.stdEmptyCtx)
+        self.assertFalse(ans)
+        self.assertIsNone(err)
+
+        text = "True == True"
+        c = toCriteria(text)
+        self.assertIsInstance(c, Criteria)
+        self.assertEqual(c.left, True)
+        self.assertEqual(c.right, True)
+        (ans, err) = c(self.stdEmptyCtx)
+        self.assertTrue(ans)
+        self.assertIsNone(err)
+
+        text = "'True' == True"
+        c = toCriteria(text)
+        self.assertIsInstance(c, Criteria)
+        self.assertEqual(c.left, "True")
+        self.assertEqual(c.right, True)
+        (ans, err) = c(self.stdEmptyCtx)
+        self.assertTrue(ans)
+        self.assertIsNone(err)
 
 
 if __name__ == '__main__':
