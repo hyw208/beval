@@ -23,10 +23,12 @@ class TestIn( TestCase ):
         self.assertFalse( ans )
         self.assertIsNone( err )
 
-    def test_in_error( self ):
-        pass
+        in_ = In( "Rating", "AAA", "AA", "A" )
+        ans, err = in_( Ctx( { "Rating": "BB" }, True ) )
+        self.assertFalse( ans )
+        self.assertIsNone( err )
 
-    
+
 if __name__ == '__main__':
     unittest.main()
 
