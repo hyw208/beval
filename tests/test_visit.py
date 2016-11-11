@@ -1,5 +1,5 @@
 import unittest
-from criteria import Criteria, Ctx, toCriteria
+from criteria import Criteria, Ctx, toCriteria, Eq, Bool
 from tests.test_all import BaseCriteriaTest
 
 
@@ -71,6 +71,24 @@ class TestVisit(BaseCriteriaTest):
         self.assertTrue(ans)
         self.assertIsNone(err)
 
+    def test_simple_bool_eq(self):
+        ctx = Ctx({"sunny": True})
+        text = "sunny == True"
+        c = toCriteria(text)
+        self.assertIsInstance(c, Eq)
+        self.assertEqual(c.left, "sunny")
+        self.assertEqual(c.right, True)
+        (ans, err) = c(ctx)
+        self.assertTrue(ans)
+        self.assertIsNone(err)
+
+        text = "sunny"
+        c = toCriteria(text)
+        self.assertIsInstance(c, Bool)
+        self.assertEqual(c.one, "sunny")
+        (ans, err) = c(ctx)
+        self.assertTrue(ans)
+        self.assertIsNone(err)
 
 if __name__ == '__main__':
     unittest.main()

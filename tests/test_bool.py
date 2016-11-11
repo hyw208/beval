@@ -1,5 +1,5 @@
 import unittest
-from criteria import Criteria, Ctx, Bool, cTrue, cFalse
+from criteria import Criteria, Ctx, Bool, cTrue, cFalse, Not
 from tests.test_all import BaseCriteriaTest
 
 
@@ -26,12 +26,22 @@ class TestBool(BaseCriteriaTest):
             self.assertTrue(obj)
             self.assertIsNone(err)
 
+            not_active = Not(active)
+            (obj, err) = not_active(ctx)
+            self.assertFalse(obj)
+            self.assertIsNone(err)
+
         values = [False, 'False', 'false', 'fALSE']
         sunny = Bool("sunny")
         for value in values:
             ctx = Ctx({"sunny": value})
             (obj, err) = sunny(ctx)
             self.assertFalse(obj)
+            self.assertIsNone(err)
+
+            not_sunny = Not(sunny)
+            (obj, err) = not_sunny(ctx)
+            self.assertTrue(obj)
             self.assertIsNone(err)
 
     def test_unsupported_types_set_directly(self):
