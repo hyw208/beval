@@ -45,6 +45,23 @@ class TestBetween(BaseCriteriaTest):
         text = str(btw)
         self.assertEqual(expected, text)
 
+    def test_no_key(self):
+        expected = "1 <= 2 < 3"
+        btw = to_criteria(expected)
+        text = str(btw)
+        self.assertEqual(expected, text)
+        (ans, err) = btw(self.stdEmptyCtx)
+        self.assertTrue(ans)
+        self.assertIsNone(err)
+
+        expected = "3 <= 3 < 3"
+        btw = to_criteria(expected)
+        text = str(btw)
+        self.assertEqual(expected, text)
+        (ans, err) = btw(self.stdEmptyCtx)
+        self.assertFalse(ans)
+        self.assertIsNone(err)
+
 
 if __name__ == '__main__':
     unittest.main()

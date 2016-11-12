@@ -65,7 +65,7 @@ class TestEq(BaseCriteriaTest):
         self.assertEqual(expected, text)
 
         gt2 = to_criteria(text)
-        self.assertEqual(gt.left, gt2.left)
+        self.assertEqual(gt.key, gt2.key)
         self.assertEqual(gt.right, gt2.right)
         self.assertEqual(gt.op, gt2.op)
 

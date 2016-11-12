@@ -1,13 +1,14 @@
-from criteria import Eq
+from criteria import Criteria, Eq
 
 
-class MockCriteria(Eq):
+class MockCriteria(Criteria):
 
-    def __init__(self, left, right):
-        super(MockCriteria, self).__init__(left, right, None)
+    def __init__(self, obj, err):
+        self._obj = obj
+        self._err = err
 
     def __call__(self, ctx):
-        return self.left, self.right
+        return self._obj, self._err
 
 
 class Person(object):

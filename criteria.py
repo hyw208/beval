@@ -6,8 +6,10 @@ import operator
 def safe_monad(func, *args, **kwargs):
     try:
         obj = func(*args, **kwargs)
+
     except Exception as err:
         return None, err
+
     else:
         return obj, None
 
@@ -17,12 +19,21 @@ def safe(fuzzy, func, *args, **kwargs):
 
     if err is None:
         return obj, None
+
     else:
         return Criteria.UNKNOWN if fuzzy else Criteria.ERROR, err
 
 
 def access(ctx, key):
     return ctx[key]
+
+
+def supported_types_for_key(criteria, key):
+    if isinstance(key, str) or isinstance(key, bool) or isinstance(key, numbers.Number):
+        return key
+
+    else:
+        raise TypeError("%s is not supported as key for %s" % type(key), type(criteria))
 
 
 class Criteria(object):
@@ -48,53 +59,53 @@ class Criteria(object):
     def _pop(self):
         return self._stack.pop()
 
-    def Bool(self, one):
-        c = Bool(one)
+    def Bool(self, key):
+        c = Bool(key)
         self._push(c)
         return self
 
-    def Eq(self, left, right):
-        c = Eq(left, right)
+    def Eq(self, key, right):
+        c = Eq(key, right)
         self._push(c)
         return self
 
-    def NotEq(self, left, right):
-        c = NotEq(left, right)
+    def NotEq(self, key, right):
+        c = NotEq(key, right)
         self._push(c)
         return self
 
-    def LtE(self, left, right):
-        c = LtE(left, right)
+    def LtE(self, key, right):
+        c = LtE(key, right)
         self._push(c)
         return self
 
-    def Lt(self, left, right):
-        c = Lt(left, right)
+    def Lt(self, key, right):
+        c = Lt(key, right)
         self._push(c)
         return self
 
-    def GtE(self, left, right):
-        c = GtE(left, right)
+    def GtE(self, key, right):
+        c = GtE(key, right)
         self._push(c)
         return self
 
-    def Gt(self, left, right):
-        c = Gt(left, right)
+    def Gt(self, key, right):
+        c = Gt(key, right)
         self._push(c)
         return self
 
-    def Between(self, lower, one, upper):
-        c = Between(lower, one, upper)
+    def Between(self, lower, key, upper, lower_op=operator.le, upper_op=operator.lt):
+        c = Between(lower, key, upper, lower_op, upper_op)
         self._push(c)
         return self
 
-    def In(self, left, *right):
-        c = In(left, *right)
+    def In(self, key, *right):
+        c = In(key, *right)
         self._push(c)
         return self
 
-    def NotIn(self, left, *right):
-        c = NotIn(left, *right)
+    def NotIn(self, key, *right):
+        c = NotIn(key, *right)
         self._push(c)
         return self
 
@@ -181,21 +192,21 @@ class Ctx(AbstractCtx):
 class Bool(Criteria):
 
     @property
-    def one(self):
-        return self._one
+    def key(self):
+        return self._key
 
-    def __init__(self, one):
-        if not (isinstance(one, str) or isinstance(one, bool)):
-            raise TypeError("%s not supported" % type(one))
-
-        self._one = one
+    def __init__(self, key):
+        self._key = supported_types_for_key(self, key)
 
     def __call__(self, ctx):
-        (obj, err) = safe_monad(access, ctx, self._one)
+        (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
             if isinstance(obj, bool):
                 return obj, None
+
+            elif isinstance(obj, numbers.Number):
+                return bool(obj), None
 
             elif isinstance(obj, str) and obj.lower() in ('true', 'false',):
                 return True if obj.lower() == 'true' else False, None
@@ -207,7 +218,7 @@ class Bool(Criteria):
             return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
 
     def __str__(self):
-        return "%s" % self._one
+        return "%s" % self._key
 
 
 cTrue = Bool(True)
@@ -218,8 +229,8 @@ cFalse = Bool(False)
 class Eq(Criteria):
 
     @property
-    def left(self):
-        return self._left
+    def key(self):
+        return self._key
 
     @property
     def right(self):
@@ -229,13 +240,13 @@ class Eq(Criteria):
     def op(self):
         return self._op
 
-    def __init__(self, left, right, op=operator.eq):
-        self._left = left
-        self._right = right
+    def __init__(self, key, right, op=operator.eq):
         self._op = op
+        self._key = supported_types_for_key(self, key)
+        self._right = right
 
     def __call__(self, ctx):
-        (obj, err) = safe_monad(access, ctx, self._left)
+        (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
             (obj_, err_) = safe(self.fuzzy(ctx), self._op, obj, self._right)
@@ -245,37 +256,37 @@ class Eq(Criteria):
             return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
 
     def __str__(self):
-        return "%s %s %s" % (self._left, OP_TO_TEXT_MAP[self._op], quote(self._right))
+        return "%s %s %s" % (self._key, OP_TO_TEXT_MAP[self._op], quote(self._right))
 
 
 class NotEq(Eq):
 
-    def __init__(self, left, right):
-        super(NotEq, self).__init__(left, right, operator.ne)
+    def __init__(self, key, right):
+        super(NotEq, self).__init__(key, right, operator.ne)
 
 
 class Lt(Eq):
 
-    def __init__(self, left, right):
-        super(Lt, self).__init__(left, right, operator.lt)
+    def __init__(self, key, right):
+        super(Lt, self).__init__(key, right, operator.lt)
 
 
 class LtE(Eq):
 
-    def __init__(self, left, right):
-        super(LtE, self).__init__(left, right, operator.le)
+    def __init__(self, key, right):
+        super(LtE, self).__init__(key, right, operator.le)
 
 
 class Gt(Eq):
 
-    def __init__(self, left, right):
-        super(Gt, self).__init__(left, right, operator.gt)
+    def __init__(self, key, right):
+        super(Gt, self).__init__(key, right, operator.gt)
 
 
 class GtE(Eq):
 
-    def __init__(self, left, right):
-        super(GtE, self).__init__(left, right, operator.ge)
+    def __init__(self, key, right):
+        super(GtE, self).__init__(key, right, operator.ge)
 
 
 class Between(Criteria):
@@ -289,8 +300,8 @@ class Between(Criteria):
         return self._lower_op
 
     @property
-    def one(self):
-        return self._one
+    def key(self):
+        return self._key
 
     @property
     def upper_op(self):
@@ -300,15 +311,15 @@ class Between(Criteria):
     def upper(self):
         return self._upper
 
-    def __init__(self, lower, one, upper, lower_op=operator.le, upper_op=operator.lt):
+    def __init__(self, lower, key, upper, lower_op=operator.le, upper_op=operator.lt):
         self._lower = lower
         self._lower_op = lower_op
-        self._one = one
+        self._key = supported_types_for_key(self, key)
         self._upper_op = upper_op
         self._upper = upper
 
     def __call__(self, ctx):
-        (obj, err) = safe_monad(access, ctx, self._one)
+        (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
             (obj_, err_) = safe(self.fuzzy(ctx), self._lower_op, self._lower, obj)
@@ -323,16 +334,16 @@ class Between(Criteria):
             return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
 
     def __str__(self):
-        return "%s %s %s %s %s" % (self._lower, OP_TO_TEXT_MAP[self._lower_op], self._one, OP_TO_TEXT_MAP[self._upper_op], self._upper)
+        return "%s %s %s %s %s" % (self._lower, OP_TO_TEXT_MAP[self._lower_op], self._key, OP_TO_TEXT_MAP[self._upper_op], self._upper)
 
 
 class In(Eq):
 
-    def __init__(self, left, *right):
-        super(In, self).__init__(left, right)
+    def __init__(self, key, *right):
+        super(In, self).__init__(key, right)
 
     def __call__(self, ctx):
-        (obj, err) = safe_monad(access, ctx, self._left)
+        (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
             negative = 0
@@ -365,20 +376,20 @@ class In(Eq):
             return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
 
     def __str__(self):
-        return "%s in (%s,)" % (self._left, ",".join(quote(one) for one in self._right))
+        return "%s in (%s,)" % (self._key, ",".join(quote(one) for one in self._right))
 
 
 class NotIn(In):
 
-    def __init__(self, left, *right):
-        super(NotIn, self).__init__(left, *right)
+    def __init__(self, key, *right):
+        super(NotIn, self).__init__(key, *right)
 
     def __call__(self, ctx):
         (obj, err) = super(NotIn, self).__call__(ctx)
         return not obj if obj in (True, False,) else obj, err
 
     def __str__(self):
-        return "%s not in (%s,)" % (self._left, ",".join(quote(one) for one in self._right))
+        return "%s not in (%s,)" % (self._key, ",".join(quote(one) for one in self._right))
 
 
 class All(Criteria):

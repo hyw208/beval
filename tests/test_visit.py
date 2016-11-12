@@ -21,7 +21,8 @@ class TestVisit(BaseCriteriaTest):
         for text_, equal_, type_, ans_, err_ in tests:
             c = to_criteria(text_)
             self.assertIsInstance(c, Criteria)
-            self.assertEqual(c.one, equal_)
+            self.assertIsInstance(c, Bool)
+            self.assertEqual(c.key, equal_)
 
             (ans, err) = c(std_ctx)
             self.assertIsInstance(ans, type_)
@@ -37,8 +38,8 @@ class TestVisit(BaseCriteriaTest):
         """
         text = "True == 'True'"
         c = to_criteria(text)
-        self.assertIsInstance(c, Criteria)
-        self.assertEqual(c.left, True)
+        self.assertIsInstance(c, Eq)
+        self.assertEqual(c.key, True)
         self.assertEqual(c.right, "True")
         (ans, err) = c(self.stdEmptyCtx)
         self.assertFalse(ans)
@@ -46,8 +47,8 @@ class TestVisit(BaseCriteriaTest):
 
         text = "'True' == 'True'"
         c = to_criteria(text)
-        self.assertIsInstance(c, Criteria)
-        self.assertEqual(c.left, "True")
+        self.assertIsInstance(c, Eq)
+        self.assertEqual(c.key, "True")
         self.assertEqual(c.right, "True")
         (ans, err) = c(self.stdEmptyCtx)
         self.assertFalse(ans)
@@ -55,8 +56,8 @@ class TestVisit(BaseCriteriaTest):
 
         text = "True == True"
         c = to_criteria(text)
-        self.assertIsInstance(c, Criteria)
-        self.assertEqual(c.left, True)
+        self.assertIsInstance(c, Eq)
+        self.assertEqual(c.key, True)
         self.assertEqual(c.right, True)
         (ans, err) = c(self.stdEmptyCtx)
         self.assertTrue(ans)
@@ -64,8 +65,8 @@ class TestVisit(BaseCriteriaTest):
 
         text = "'True' == True"
         c = to_criteria(text)
-        self.assertIsInstance(c, Criteria)
-        self.assertEqual(c.left, "True")
+        self.assertIsInstance(c, Eq)
+        self.assertEqual(c.key, "True")
         self.assertEqual(c.right, True)
         (ans, err) = c(self.stdEmptyCtx)
         self.assertTrue(ans)
@@ -76,7 +77,7 @@ class TestVisit(BaseCriteriaTest):
         text = "sunny == True"
         c = to_criteria(text)
         self.assertIsInstance(c, Eq)
-        self.assertEqual(c.left, "sunny")
+        self.assertEqual(c.key, "sunny")
         self.assertEqual(c.right, True)
         (ans, err) = c(ctx)
         self.assertTrue(ans)
@@ -85,7 +86,7 @@ class TestVisit(BaseCriteriaTest):
         text = "sunny"
         c = to_criteria(text)
         self.assertIsInstance(c, Bool)
-        self.assertEqual(c.one, "sunny")
+        self.assertEqual(c.key, "sunny")
         (ans, err) = c(ctx)
         self.assertTrue(ans)
         self.assertIsNone(err)
@@ -96,7 +97,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsInstance(c, Between)
         self.assertEqual(c.lower, 50)
         self.assertEqual(c.lower_op, operator.le)
-        self.assertEqual(c.one, "price")
+        self.assertEqual(c.key, "price")
         self.assertEqual(c.upper_op, operator.lt)
         self.assertEqual(c.upper, 100)
         (ans, err) = c(Ctx({"price": 75}))
@@ -108,7 +109,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsInstance(c, Between)
         self.assertEqual(c.lower, 44.1)
         self.assertEqual(c.lower_op, operator.lt)
-        self.assertEqual(c.one, "score")
+        self.assertEqual(c.key, "score")
         self.assertEqual(c.upper_op, operator.le)
         self.assertEqual(c.upper, 66.2)
         (ans, err) = c(Ctx({"score": 55.6}))
@@ -119,6 +120,7 @@ class TestVisit(BaseCriteriaTest):
         for text in ("not sunny", "not (sunny)"):
             not_sunny = to_criteria(text)
             self.assertIsInstance(not_sunny, Not)
+            self.assertIsInstance(not_sunny.one, Bool)
             ctx = Ctx({"sunny": False})
             (ans, err) = not_sunny(ctx)
             self.assertTrue(ans)
@@ -131,7 +133,7 @@ class TestVisit(BaseCriteriaTest):
             self.assertIsInstance(btw, Between)
             self.assertEqual(btw.lower, 44.1)
             self.assertEqual(btw.lower_op, operator.lt)
-            self.assertEqual(btw.one, "score")
+            self.assertEqual(btw.key, "score")
             self.assertEqual(btw.upper_op, operator.le)
             self.assertEqual(btw.upper, 66.2)
 
@@ -139,7 +141,7 @@ class TestVisit(BaseCriteriaTest):
             c = to_criteria(text)
             self.assertIsInstance(c, Not)
             eq = c.one
-            self.assertEqual(eq.left, "sunny")
+            self.assertEqual(eq.key, "sunny")
             self.assertEqual(eq.right, True)
             (ans, err) = eq(ctx)
             self.assertFalse(ans)
@@ -270,6 +272,7 @@ class TestVisit(BaseCriteriaTest):
         text = "score in (90, 91, 92)"
         in_ = to_criteria(text)
         self.assertIsInstance(in_, In)
+        self.assertEqual(in_.key, "score")
         self.assertEqual(len(in_.right), 3)
         (ans, err) = in_(ctx)
         self.assertTrue(ans)
