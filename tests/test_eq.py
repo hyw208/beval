@@ -1,5 +1,5 @@
 import unittest
-
+import operator
 from criteria import Criteria, Eq, NotEq, Ctx, Gt, LtE, to_criteria
 from tests.test_all import BaseCriteriaTest
 
@@ -68,6 +68,13 @@ class TestEq(BaseCriteriaTest):
         self.assertEqual(gt.key, gt2.key)
         self.assertEqual(gt.right, gt2.right)
         self.assertEqual(gt.op, gt2.op)
+
+    def test_ser_simple_math(self):
+        expected = "100 > 99"
+        gt = to_criteria(expected)
+        self.assertEqual(gt.key, 100)
+        self.assertEqual(gt.right, 99)
+        self.assertEqual(gt.op, operator.gt)
 
 
 if __name__ == '__main__':

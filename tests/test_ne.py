@@ -1,6 +1,6 @@
 import unittest
-
-from criteria import Criteria, NotEq
+import operator
+from criteria import Criteria, NotEq, to_criteria
 from tests.test_all import BaseCriteriaTest
 
 
@@ -22,6 +22,19 @@ class TestNe(BaseCriteriaTest):
         (ans, err) = ne3(self.john_duke)
         self.assertEqual(ans, Criteria.UNKNOWN)
         self.assertIsInstance(err, KeyError)
+
+    def test_ser(self):
+        expected = "first_name != 'John'"
+        not_eq = to_criteria(expected)
+        self.assertIsInstance(not_eq, NotEq)
+        self.assertEqual(not_eq.key, 'first_name')
+        self.assertEqual(not_eq.right, 'John')
+        self.assertEqual(not_eq.op, operator.ne)
+        (ans, err) = not_eq(self.john_duke)
+        self.assertFalse(ans)
+        self.assertIsNone(err)
+        text = str(not_eq)
+        self.assertEqual(expected, text)
 
 
 if __name__ == '__main__':

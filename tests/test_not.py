@@ -80,6 +80,16 @@ class TestNot(BaseCriteriaTest):
         self.assertNotEqual(text2, text3)
         self.assertEqual(text3, expected)
 
+        expected = "not (1)"
+        text2 = "not 1"
+        not2_ = to_criteria(text2)
+        text3 = str(not2_)
+        self.assertNotEqual(text2, text3)
+        self.assertEqual(text3, expected)
+        (ans, err) = not2_(self.stdEmptyCtx)
+        self.assertFalse(ans)
+        self.assertIsNone(err)
+
 
 if __name__ == '__main__':
     unittest.main()
