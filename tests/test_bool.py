@@ -59,6 +59,19 @@ class TestBool(BaseCriteriaTest):
                 self.assertEqual(obj, err_)
                 self.assertIsInstance(err, TypeError)
 
+    def test_ser(self):
+        bool_ = Bool(True)
+        text = str(bool_)
+        self.assertEqual(text, 'True')
+
+        bool_ = Bool('True')
+        text = str(bool_)
+        self.assertEqual(text, 'True')
+
+        bool_ = Bool('funny')
+        text = str(bool_)
+        self.assertEqual(text, 'funny')
+
 
 if __name__ == '__main__':
     unittest.main()

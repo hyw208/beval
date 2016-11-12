@@ -1,5 +1,5 @@
 import unittest
-from criteria import Eq, cTrue, cFalse, Or, Any
+from criteria import Eq, cTrue, cFalse, Or, Any, to_criteria
 from tests.test_all import BaseCriteriaTest
 
 
@@ -67,6 +67,25 @@ class TestOr(BaseCriteriaTest):
         (ans_, err_) = any_(self.john_duke)
         self.assertEqual(ans, ans_)
         self.assertEqual(err, err_)
+
+    def test_ser(self):
+        any_ = Any(Eq("hair", "straight"), Eq("last_name", "Duke"), Eq("first_name", "John"), Eq("age", 31))
+        text = str(any_)
+        any2_ = to_criteria(text)
+        text2 = str(any2_)
+        self.assertEqual(text, text2)
+
+        or_ = Or(cFalse, cTrue)
+        text = str(or_)
+        or2_ = to_criteria(text)
+        text2 = str(or2_)
+        self.assertEqual(text, text2)
+
+        or_ = Or(Eq("hair", "straight"), Eq("last_name", "Duke"))
+        text = str(or_)
+        or2_ = to_criteria(text)
+        text2 = str(or2_)
+        self.assertEqual(text, text2)
 
 
 if __name__ == '__main__':

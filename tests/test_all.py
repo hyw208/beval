@@ -1,7 +1,7 @@
 import unittest
 from unittest import TestCase
 
-from criteria import Criteria, Ctx, Between, All, And
+from criteria import Criteria, Ctx, Between, All, And, to_criteria
 from tests.test_helper import MockCriteria
 
 
@@ -121,6 +121,14 @@ class TestAll(BaseCriteriaTest):
         (obj, err) = all_(self.fuzzyCtx)
         self.assertEqual(obj, Criteria.UNKNOWN)
         self.assertIsInstance(err, KeyError)
+
+    def test_ser_all(self):
+        many = [self.price_btw_100_200, self.price_btw_99_101, self.price_btw_50_101]
+        all_ = All(*many)
+        text = str(all_)
+        all2_ = to_criteria(text)
+        text2 = str(all2_)
+        self.assertEqual(text, text2)
 
 
 if __name__ == '__main__':

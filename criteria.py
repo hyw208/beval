@@ -5,10 +5,11 @@ import operator
 
 OP_TO_TEXT_MAP = {
     operator.eq: "==",
+    operator.ne: "!=",
     operator.lt: "<",
     operator.le: "<=",
-    operator.gt: "<",
-    operator.ge: "<=",
+    operator.gt: ">",
+    operator.ge: ">=",
 }
 
 
@@ -222,6 +223,9 @@ class Bool(Criteria):
         else:
             return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
 
+    def __str__(self):
+        return "%s" % self._one
+
 
 cTrue = Bool(True)
 
@@ -335,6 +339,9 @@ class Between(Criteria):
         else:
             return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
 
+    def __str__(self):
+        return "%s %s %s %s %s" % (self._lower, OP_TO_TEXT_MAP[self._lower_op], self._one, OP_TO_TEXT_MAP[self._upper_op], self._upper)
+
 
 class In(Eq):
 
@@ -374,6 +381,9 @@ class In(Eq):
         else:
             return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
 
+    def __str__(self):
+        return "%s in (%s,)" % (self._left, ",".join(quote(one) for one in self._right))
+
 
 class NotIn(In):
 
@@ -383,6 +393,9 @@ class NotIn(In):
     def __call__(self, ctx):
         (obj, err) = super(NotIn, self).__call__(ctx)
         return not obj if obj in (True, False,) else obj, err
+
+    def __str__(self):
+        return "%s not in (%s,)" % (self._left, ",".join(quote(one) for one in self._right))
 
 
 class All(Criteria):
@@ -425,6 +438,9 @@ class All(Criteria):
         else:
             return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, first_error
 
+    def __str__(self):
+        return "%s" % " and ".join( str(one) for one in self._many )
+
 
 class Any(All):
 
@@ -455,6 +471,9 @@ class Any(All):
         else:
             return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, first_error
 
+    def __str__(self):
+        return "%s" % " or ".join( str(one) for one in self._many )
+
 
 class And(All):
 
@@ -469,6 +488,9 @@ class And(All):
     def __init__(self, left, right):
         super(And, self).__init__(left, right)
 
+    def __str__(self):
+        return "(%s and %s)" % (self.left, self.right)
+
 
 class Or(Any):
 
@@ -482,6 +504,9 @@ class Or(Any):
 
     def __init__(self, left, right):
         super(Or, self).__init__(left, right)
+
+    def __str__(self):
+        return "(%s or %s)" % (self.left, self.right)
 
 
 class Not(Criteria):
@@ -499,6 +524,9 @@ class Not(Criteria):
     def __call__(self, ctx):
         (obj, err) = self._one(ctx)
         return not obj if obj in (True, False,) else obj, err
+
+    def __str__(self):
+        return "not (%s)" % str(self._one)
 
 
 AST_OP_TO_CRITERIA_MAP = {
@@ -641,3 +669,4 @@ def visit(node, data):
 
         data.append(id)
         return
+

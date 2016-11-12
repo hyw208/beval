@@ -1,6 +1,6 @@
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Ctx, LtE, Lt, Between
+from criteria import Criteria, Ctx, LtE, Lt, Between, to_criteria
 from tests.test_all import BaseCriteriaTest
 
 
@@ -38,6 +38,12 @@ class TestBetween(BaseCriteriaTest):
         ans, err = btw_(self.fuzzyEmptyCtx)
         self.assertEqual(ans, Criteria.UNKNOWN)
         self.assertIsInstance(err, KeyError)
+
+    def test_ser(self):
+        expected = "234 < score <= 456"
+        btw = to_criteria(expected)
+        text = str(btw)
+        self.assertEqual(expected, text)
 
 
 if __name__ == '__main__':

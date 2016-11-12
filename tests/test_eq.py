@@ -1,6 +1,6 @@
 import unittest
 
-from criteria import Criteria, Eq, Ctx
+from criteria import Criteria, Eq, NotEq, Ctx, Gt, LtE, to_criteria
 from tests.test_all import BaseCriteriaTest
 
 
@@ -32,7 +32,7 @@ class TestEq(BaseCriteriaTest):
         self.assertEqual(ans, Criteria.ERROR)
         self.assertIsInstance(error, KeyError)
 
-    def test_ser(self):
+    def test_ser_eq(self):
         eq = Eq("name", "John")
         text = str(eq)
         self.assertEqual(text, "name == 'John'")
@@ -44,6 +44,30 @@ class TestEq(BaseCriteriaTest):
         eq = Eq("pass", True)
         text = str(eq)
         self.assertEqual(text, "pass == True")
+
+    def test_ser_not_eq(self):
+        not_eq = NotEq("name", "John")
+        text = str(not_eq)
+        self.assertEqual(text, "name != 'John'")
+
+        not_eq = NotEq("price", 1002)
+        text = str(not_eq)
+        self.assertEqual(text, "price != 1002")
+
+        not_eq = NotEq("pass", True)
+        text = str(not_eq)
+        self.assertEqual(text, "pass != True")
+
+    def test_ser_gt(self):
+        expected = "price > 0.99"
+        gt = Gt("price", 0.99)
+        text = str(gt)
+        self.assertEqual(expected, text)
+
+        gt2 = to_criteria(text)
+        self.assertEqual(gt.left, gt2.left)
+        self.assertEqual(gt.right, gt2.right)
+        self.assertEqual(gt.op, gt2.op)
 
 
 if __name__ == '__main__':

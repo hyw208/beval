@@ -275,5 +275,6 @@ class TestVisit(BaseCriteriaTest):
         self.assertTrue(ans)
         self.assertIsNone(err)
 
+
 if __name__ == '__main__':
     unittest.main()
