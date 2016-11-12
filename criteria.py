@@ -3,23 +3,6 @@ import numbers
 import operator
 
 
-OP_TO_TEXT_MAP = {
-    operator.eq: "==",
-    operator.ne: "!=",
-    operator.lt: "<",
-    operator.le: "<=",
-    operator.gt: ">",
-    operator.ge: ">=",
-}
-
-
-def quote(obj):
-    if isinstance(obj, str):
-        return "'%s'" % obj
-    else:
-        return "%s" % obj
-
-
 def safe_monad(func, *args, **kwargs):
     try:
         obj = func(*args, **kwargs)
@@ -529,6 +512,16 @@ class Not(Criteria):
         return "not (%s)" % str(self._one)
 
 
+OP_TO_TEXT_MAP = {
+    operator.eq: "==",
+    operator.ne: "!=",
+    operator.lt: "<",
+    operator.le: "<=",
+    operator.gt: ">",
+    operator.ge: ">=",
+}
+
+
 AST_OP_TO_CRITERIA_MAP = {
     ast.Eq: Eq,
     ast.NotEq: NotEq,
@@ -550,6 +543,13 @@ AST_OP_TO_OPERATOR_MAP = {
     ast.Gt: operator.gt,
     ast.GtE: operator.ge,
 }
+
+
+def quote(obj):
+    if isinstance(obj, str):
+        return "'%s'" % obj
+    else:
+        return "%s" % obj
 
 
 def to_criteria(text):
