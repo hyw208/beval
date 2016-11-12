@@ -1,6 +1,6 @@
 import unittest
 
-from criteria import Criteria, Ctx, And, GtE, LtE
+from criteria import Criteria, Ctx, And, GtE, LtE, to_criteria
 from tests.test_all import BaseCriteriaTest
 from tests.test_helper import House
 
@@ -46,6 +46,10 @@ class TestCriteria(BaseCriteriaTest):
         my_price_range_criteria = Criteria().Between(150000, "price", 450000).NotEq("price", 400000).And().Done()
         my_price_range_criteria = Criteria().Between(150000, "price", 450000).Eq("price", 400000).Not().And().Done()
         my_price_range_criteria = Criteria().GtE("price", 150000).Lt("price", 450000).And().Eq("price",400000).Not().And().Done()
+
+        """ If it seems a bit too complicated, how about just writing out the text? """
+        text = "150000 <= price < 450000 and price != 400000"
+        my_price_range_criteria = to_criteria(text)
 
         """ Is the first house within my search range? """
         (ans, err) = my_price_range_criteria(available_houses[0])

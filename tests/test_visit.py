@@ -1,6 +1,6 @@
 import unittest
 import operator
-from criteria import Criteria, Ctx, toCriteria, Eq, Bool, Between, Not, And, Or, Eq, NotEq, Gt, GtE, All, Any, In, NotIn
+from criteria import Criteria, Ctx, to_criteria, Eq, Bool, Between, Not, And, Or, Eq, NotEq, Gt, GtE, All, Any, In, NotIn
 from tests.test_all import BaseCriteriaTest
 
 
@@ -19,7 +19,7 @@ class TestVisit(BaseCriteriaTest):
         tests.append(('famous', 'famous', type(Criteria.ERROR), Criteria.ERROR, KeyError))
 
         for text_, equal_, type_, ans_, err_ in tests:
-            c = toCriteria(text_)
+            c = to_criteria(text_)
             self.assertIsInstance(c, Criteria)
             self.assertEqual(c.one, equal_)
 
@@ -36,7 +36,7 @@ class TestVisit(BaseCriteriaTest):
         criteria.left is always turned into real True bool during evaluation
         """
         text = "True == 'True'"
-        c = toCriteria(text)
+        c = to_criteria(text)
         self.assertIsInstance(c, Criteria)
         self.assertEqual(c.left, True)
         self.assertEqual(c.right, "True")
@@ -45,7 +45,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsNone(err)
 
         text = "'True' == 'True'"
-        c = toCriteria(text)
+        c = to_criteria(text)
         self.assertIsInstance(c, Criteria)
         self.assertEqual(c.left, "True")
         self.assertEqual(c.right, "True")
@@ -54,7 +54,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsNone(err)
 
         text = "True == True"
-        c = toCriteria(text)
+        c = to_criteria(text)
         self.assertIsInstance(c, Criteria)
         self.assertEqual(c.left, True)
         self.assertEqual(c.right, True)
@@ -63,7 +63,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsNone(err)
 
         text = "'True' == True"
-        c = toCriteria(text)
+        c = to_criteria(text)
         self.assertIsInstance(c, Criteria)
         self.assertEqual(c.left, "True")
         self.assertEqual(c.right, True)
@@ -74,7 +74,7 @@ class TestVisit(BaseCriteriaTest):
     def test_simple_bool_eq(self):
         ctx = Ctx({"sunny": True})
         text = "sunny == True"
-        c = toCriteria(text)
+        c = to_criteria(text)
         self.assertIsInstance(c, Eq)
         self.assertEqual(c.left, "sunny")
         self.assertEqual(c.right, True)
@@ -83,7 +83,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsNone(err)
 
         text = "sunny"
-        c = toCriteria(text)
+        c = to_criteria(text)
         self.assertIsInstance(c, Bool)
         self.assertEqual(c.one, "sunny")
         (ans, err) = c(ctx)
@@ -92,7 +92,7 @@ class TestVisit(BaseCriteriaTest):
 
     def test_between(self):
         text = "50 <= price < 100"
-        c = toCriteria(text)
+        c = to_criteria(text)
         self.assertIsInstance(c, Between)
         self.assertEqual(c.lower, 50)
         self.assertEqual(c.lower_op, operator.le)
@@ -104,7 +104,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsNone(err)
 
         text = "44.1 < score <= 66.2"
-        c = toCriteria(text)
+        c = to_criteria(text)
         self.assertIsInstance(c, Between)
         self.assertEqual(c.lower, 44.1)
         self.assertEqual(c.lower_op, operator.lt)
@@ -117,7 +117,7 @@ class TestVisit(BaseCriteriaTest):
 
     def test_not(self):
         for text in ("not sunny", "not (sunny)"):
-            not_sunny = toCriteria(text)
+            not_sunny = to_criteria(text)
             self.assertIsInstance(not_sunny, Not)
             ctx = Ctx({"sunny": False})
             (ans, err) = not_sunny(ctx)
@@ -125,7 +125,7 @@ class TestVisit(BaseCriteriaTest):
             self.assertIsNone(err)
 
         for text in ("not 44.1 < score <= 66.2", "not (44.1 < score <= 66.2)",):
-            c = toCriteria(text)
+            c = to_criteria(text)
             self.assertIsInstance(c, Not)
             btw = c.one
             self.assertIsInstance(btw, Between)
@@ -136,7 +136,7 @@ class TestVisit(BaseCriteriaTest):
             self.assertEqual(btw.upper, 66.2)
 
         for text in ("not sunny == True", "not (sunny == True)",):
-            c = toCriteria(text)
+            c = to_criteria(text)
             self.assertIsInstance(c, Not)
             eq = c.one
             self.assertEqual(eq.left, "sunny")
@@ -148,7 +148,7 @@ class TestVisit(BaseCriteriaTest):
     def test_bool_op_and(self):
         ctx = Ctx({"sunny": True, "score": 92})
         text = "sunny == True and score > 90"
-        and_ = toCriteria(text)
+        and_ = to_criteria(text)
         self.assertIsInstance(and_, And)
         eq_, gt_ = and_.left, and_.right
         self.assertIsInstance(eq_, Eq)
@@ -166,7 +166,7 @@ class TestVisit(BaseCriteriaTest):
     def test_bool_op_all(self):
         ctx = Ctx({"sunny": True, "score": 92, "funny": False})
         text = "sunny and score >= 90 and funny != True"
-        all_ = toCriteria(text)
+        all_ = to_criteria(text)
         self.assertIsInstance(all_, All)
         sunny, score, funny = all_.many
         self.assertIsInstance(sunny, Bool)
@@ -177,7 +177,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsNone(err)
 
         text = "sunny and (score >= 90 and funny != True)"
-        and_ = toCriteria(text)
+        and_ = to_criteria(text)
         self.assertIsInstance(and_, And)
         sunny = and_.left
         and_2nd = and_.right
@@ -193,7 +193,7 @@ class TestVisit(BaseCriteriaTest):
     def test_bool_op_or(self):
         ctx = Ctx({"sunny": True, "score": 92})
         text = "sunny == True or score > 90"
-        or_ = toCriteria(text)
+        or_ = to_criteria(text)
         self.assertIsInstance(or_, Or)
         eq_, gt_ = or_.left, or_.right
         self.assertIsInstance(eq_, Eq)
@@ -211,7 +211,7 @@ class TestVisit(BaseCriteriaTest):
     def test_bool_op_any(self):
         ctx = Ctx({"sunny": True, "score": 92, "funny": False})
         text = "sunny or score >= 90 or funny != True"
-        any_ = toCriteria(text)
+        any_ = to_criteria(text)
         self.assertIsInstance(any_, Any)
         sunny, score, funny = any_.many
         self.assertIsInstance(sunny, Bool)
@@ -222,7 +222,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsNone(err)
 
         text = "sunny or (score >= 90 or funny != True)"
-        or_ = toCriteria(text)
+        or_ = to_criteria(text)
         self.assertIsInstance(or_, Or)
         sunny = or_.left
         or_2nd = or_.right
@@ -236,7 +236,7 @@ class TestVisit(BaseCriteriaTest):
         self.assertIsNone(err)
 
         text = "(sunny or score >= 90) or funny != True"
-        or_ = toCriteria(text)
+        or_ = to_criteria(text)
         self.assertIsInstance(or_, Or)
         or_2nd = or_.left
         self.assertIsInstance(or_2nd, Or)
@@ -252,7 +252,7 @@ class TestVisit(BaseCriteriaTest):
     def test_all_and_any_or(self):
         ctx = Ctx({"sunny": True, "score": 92, "funny": False})
         text = "sunny and score >= 90 or funny != True"
-        or_ = toCriteria(text)
+        or_ = to_criteria(text)
         self.assertIsInstance(or_, Or)
         and_ = or_.left
         funny = or_.right
@@ -268,7 +268,7 @@ class TestVisit(BaseCriteriaTest):
     def test_in(self):
         ctx = Ctx({"sunny": True, "score": 92, "funny": False})
         text = "score in (90, 91, 92)"
-        in_ = toCriteria(text)
+        in_ = to_criteria(text)
         self.assertIsInstance(in_, In)
         self.assertEqual(len(in_.right), 3)
         (ans, err) = in_(ctx)

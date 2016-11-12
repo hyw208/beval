@@ -524,7 +524,7 @@ AST_OP_TO_OPERATOR_MAP = {
 }
 
 
-def toCriteria(text):
+def to_criteria(text):
     data = []
     node = ast.parse(text, mode='eval')
     visit(node, data)
