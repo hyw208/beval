@@ -64,6 +64,11 @@ class Criteria(object):
     def _pop(self):
         return self._stack.pop()
 
+    def Bool(self, one):
+        c = Bool(one)
+        self._push(c)
+        return self
+
     def Eq(self, left, right):
         c = Eq(left, right)
         self._push(c)
@@ -503,7 +508,7 @@ AST_OP_TO_CRITERIA_MAP = {
     ast.LtE: LtE,
     ast.Gt: Gt,
     ast.GtE: GtE,
-    "Between": Between,
+    ast.Not: Not,
     ast.In: In,
     ast.NotIn: NotIn,
 }
@@ -527,6 +532,7 @@ def toCriteria(text):
 
 
 def visit(node, data):
+
     if isinstance(node, ast.Expression):
         visit(node.body, data)
         if len(data) != 1:
@@ -537,7 +543,22 @@ def visit(node, data):
         return
 
     if isinstance(node, ast.BoolOp):
-        raise NotImplementedError
+        if isinstance(node.op, ast.And) or isinstance(node.op, ast.Or):
+            values = []
+            for value in node.values:
+                visit(value, data)
+                obj = data.pop()
+                values.append(obj if isinstance(obj, Criteria) else Bool(obj))
+
+            cls = (And if len(values) == 2 else All) \
+                if isinstance(node.op, ast.And) else \
+                    (Or if len(values) == 2 else Any)
+
+            data.append(cls(*values))
+            return
+
+        else:
+            raise SyntaxError("do not support %s" % type(node.op))
 
     if isinstance(node, ast.Compare):
         visit(node.left, data)
@@ -551,7 +572,7 @@ def visit(node, data):
             visit(comparator, data)
             right = data.pop()
 
-            c = cls(left, right)
+            c = cls(left, right) if cls not in (In, NotIn, ) else cls(left, *right)
             data.append(c)
             return
 
@@ -577,10 +598,28 @@ def visit(node, data):
             return
 
         else:
-            raise Exception("do not support ast.Compare with more than 2 ops: %s" % node)
+            raise SyntaxError("do not support ast.Compare with more than 2 ops: %s" % node)
 
     if isinstance(node, ast.UnaryOp):
-        raise NotImplementedError
+        if isinstance(node.op, ast.Not):
+            visit(node.operand, data)
+            obj = data.pop()
+            criteria = obj if isinstance(obj, Criteria) else Bool(obj)
+
+            cls = AST_OP_TO_CRITERIA_MAP[type(node.op)]
+            data.append(cls(criteria))
+            return
+
+        else:
+            raise SyntaxError("do not support %s" % type(node.op))
+
+    if isinstance(node, ast.Tuple):
+        values = []
+        for elt in node.elts:
+            visit(elt, data)
+            values.append(data.pop())
+        data.append(values)
+        return
 
     if isinstance(node, ast.Num):
         data.append(node.n)
