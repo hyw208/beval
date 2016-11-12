@@ -1,5 +1,6 @@
 import unittest
-from criteria import Criteria, Ctx, toCriteria, Eq, Bool
+import operator
+from criteria import Criteria, Ctx, toCriteria, Eq, Bool, Between
 from tests.test_all import BaseCriteriaTest
 
 
@@ -89,6 +90,27 @@ class TestVisit(BaseCriteriaTest):
         (ans, err) = c(ctx)
         self.assertTrue(ans)
         self.assertIsNone(err)
+
+    def test_between(self):
+        text = "50 <= price < 100"
+        c = toCriteria(text)
+        self.assertIsInstance(c, Between)
+        self.assertEqual(c.lower, 50)
+        self.assertEqual(c.lower_op, operator.le)
+        self.assertEqual(c.one, "price")
+        self.assertEqual(c.upper_op, operator.lt)
+        self.assertEqual(c.upper, 100)
+
+        text = "44.1 < score <= 66.2"
+        c = toCriteria(text)
+        self.assertIsInstance(c, Between)
+        self.assertEqual(c.lower, 44.1)
+        self.assertEqual(c.lower_op, operator.lt)
+        self.assertEqual(c.one, "score")
+        self.assertEqual(c.upper_op, operator.le)
+        self.assertEqual(c.upper, 66.2)
+
+
 
 if __name__ == '__main__':
     unittest.main()

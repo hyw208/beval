@@ -509,6 +509,16 @@ AST_OP_TO_CRITERIA_MAP = {
 }
 
 
+AST_OP_TO_OPERATOR_MAP = {
+    ast.Eq: operator.eq,
+    ast.NotEq: operator.ne,
+    ast.Lt: operator.lt,
+    ast.LtE: operator.le,
+    ast.Gt: operator.gt,
+    ast.GtE: operator.ge,
+}
+
+
 def toCriteria(text):
     data = []
     node = ast.parse(text, mode='eval')
@@ -533,7 +543,7 @@ def visit(node, data):
         visit(node.left, data)
         left = data.pop()
 
-        if len(node.ops):
+        if len(node.ops) == 1:
             op = node.ops[0]
             cls = AST_OP_TO_CRITERIA_MAP[type(op)]
 
@@ -546,12 +556,25 @@ def visit(node, data):
             return
 
         elif len(node.ops) == 2:
-            lowerOp = node.ops[0]
-            lower = node.comparators[0]
+            lower = left
 
-            upperOp = node.ops[1]
-            upper = node.comparator[1]
-            print
+            op = node.ops[0]
+            lower_op = AST_OP_TO_OPERATOR_MAP[type(op)]
+
+            comparator = node.comparators[0]
+            visit(comparator, data)
+            one = data.pop()
+
+            op = node.ops[1]
+            upper_op = AST_OP_TO_OPERATOR_MAP[type(op)]
+
+            comparator = node.comparators[1]
+            visit(comparator, data)
+            upper = data.pop()
+
+            between = Between( lower, one, upper, lower_op, upper_op )
+            data.append(between)
+            return
 
         else:
             raise Exception("do not support ast.Compare with more than 2 ops: %s" % node)
