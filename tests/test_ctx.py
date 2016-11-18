@@ -1,25 +1,25 @@
 import unittest
-
+from unittest import TestCase
 from criteria import Ctx
-from tests.test_all import BaseCriteriaTest
-from tests.test_helper import Person
+from test_helper import acura_small
 
 
-class TestCtx(BaseCriteriaTest):
+class TestCtx(TestCase):
 
     def test_targets(self):
-        for (target, fuzzy) in [(Person("John", "Duke", True), False), ({"first_name": "John", "last_name": "Duke"}, True)]:
-            ctx = Ctx(target, fuzzy)
-            self.assertEqual(ctx["first_name"], "John")
-            self.assertEqual(ctx["last_name"], "Duke")
-            self.assertEqual(ctx.fuzzy, fuzzy)
+        with acura_small as acura:
+            for fuzzy in (True, False):
+                ctx = Ctx(acura, fuzzy)
+                self.assertEqual(ctx["make"], "Acura")
+                self.assertEqual(ctx["type"], "Small")
+                self.assertEqual(ctx.fuzzy, fuzzy)
 
     def test_fuzzy(self):
-        with self.assertRaises(KeyError):
-            self.john_duke
-            self.john_duke["credit"]
-
-        self.assertTrue(self.john_duke.fuzzy)
+        with acura_small as acura:
+            for fuzzy in (True, False):
+                ctx = Ctx(acura, fuzzy)
+                with self.assertRaises(KeyError):
+                    ctx["cpu"]
 
 
 if __name__ == '__main__':

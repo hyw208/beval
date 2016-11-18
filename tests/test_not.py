@@ -1,48 +1,51 @@
 import unittest
+from unittest import TestCase
+from criteria import Ctx, to_criteria, cTrue, cFalse, Not, And, Eq
+from test_helper import acura_small
 
-from criteria import Eq, cTrue, cFalse, And, Not, to_criteria
-from tests.test_all import BaseCriteriaTest
 
-
-class TestNot(BaseCriteriaTest):
+class TestNot(TestCase):
 
     def test_not_simple(self):
         not_ = Not(cTrue)
-        (ans, err) = not_(self.stdEmptyCtx)
+        (ans, err) = not_(Ctx({}))
         self.assertFalse(ans)
         self.assertIsNone(err)
 
         not_ = Not(cFalse)
-        (ans, err) = not_(self.stdEmptyCtx)
+        (ans, err) = not_(Ctx({}))
         self.assertTrue(ans)
         self.assertIsNone(err)
 
     def test_not_and(self):
         and_ = And(cTrue, cFalse)
         not_ = Not(and_)
-        (ans, err) = not_(self.stdEmptyCtx)
+        (ans, err) = not_(Ctx({}))
         self.assertTrue(ans)
         self.assertIsNone(err)
 
         not__ = Not(not_)
-        (ans, err) = not__(self.stdEmptyCtx)
+        (ans, err) = not__(Ctx({}))
         self.assertFalse(ans)
         self.assertIsNone(err)
 
     def test_not_eq(self):
-        eq_ = Eq("last_name", "Duke")
-        not_ = Not(eq_)
-        (ans, err) = eq_(self.john_duke)
-        self.assertTrue(ans)
-        self.assertIsNone(err)
+        with acura_small as acura:
+            ctx = Ctx(acura)
+            eq_ = Eq("make", "Acura")
+            not_ = Not(eq_)
 
-        (ans, err) = not_(self.john_duke)
-        self.assertFalse(ans)
-        self.assertIsNone(err)
+            (ans, err) = eq_(ctx)
+            self.assertTrue(ans)
+            self.assertIsNone(err)
+
+            (ans, err) = not_(ctx)
+            self.assertFalse(ans)
+            self.assertIsNone(err)
 
     def test_ser_not_eq(self):
-        expected = "not (last_name == 'Duke')"
-        not_ = Not(Eq("last_name", "Duke"))
+        expected = "not (make == 'Acura')"
+        not_ = Not(Eq("make", "Acura"))
         text = str(not_)
         self.assertEqual(text, expected)
 
@@ -51,19 +54,20 @@ class TestNot(BaseCriteriaTest):
         text2 = str(not2_)
         self.assertEqual(text, text2)
 
-        text3 = "not last_name == 'Duke'"
+        text3 = "not make == 'Acura'"
         not3_ = to_criteria(text3)
+        self.assertIsInstance(not3_, Not)
         text4 = str(not3_)
         self.assertNotEquals(text3, text4)
         self.assertEqual(text4, expected)
 
     def test_ser_not_bool(self):
-        expected = "not (funny)"
+        expected = "not (active)"
         not_ = to_criteria(expected)
         text = str(not_)
         self.assertEqual(expected, text)
 
-        text2 = "not funny"
+        text2 = "not active"
         not2_ = to_criteria(text2)
         text3 = str(not2_)
         self.assertNotEqual(text2, text3)
@@ -86,7 +90,7 @@ class TestNot(BaseCriteriaTest):
         text3 = str(not2_)
         self.assertNotEqual(text2, text3)
         self.assertEqual(text3, expected)
-        (ans, err) = not2_(self.stdEmptyCtx)
+        (ans, err) = not2_(Ctx({}))
         self.assertFalse(ans)
         self.assertIsNone(err)
 

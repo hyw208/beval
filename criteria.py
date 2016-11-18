@@ -28,12 +28,31 @@ def access(ctx, key):
     return ctx[key]
 
 
-def supported_types_for_key(criteria, key):
+def types_supported_as_key(criteria, key):
     if isinstance(key, str) or isinstance(key, bool) or isinstance(key, numbers.Number):
         return key
 
     else:
         raise TypeError("%s is not supported as key for %s" % type(key), type(criteria))
+
+
+def assert_outcomes_d_w_a(std_types, fuzzy_types):
+
+    def assert_outcomes_d(func):
+
+        def decorated(criteria, ctx):
+            outcomes = fuzzy_types if ctx.fuzzy else std_types
+            (ans, err) = func(criteria, ctx)
+
+            if ans not in outcomes:
+                raise AssertionError("unexpected outcome type '%s' for criteria '%s'" % (type(ans), type(criteria)))
+
+            else:
+                return ans, err
+
+        return decorated
+
+    return assert_outcomes_d
 
 
 class Criteria(object):
@@ -196,8 +215,9 @@ class Bool(Criteria):
         return self._key
 
     def __init__(self, key):
-        self._key = supported_types_for_key(self, key)
+        self._key = types_supported_as_key(self, key)
 
+    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
     def __call__(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
@@ -242,9 +262,10 @@ class Eq(Criteria):
 
     def __init__(self, key, right, op=operator.eq):
         self._op = op
-        self._key = supported_types_for_key(self, key)
+        self._key = types_supported_as_key(self, key)
         self._right = right
 
+    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
     def __call__(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
@@ -314,10 +335,11 @@ class Between(Criteria):
     def __init__(self, lower, key, upper, lower_op=operator.le, upper_op=operator.lt):
         self._lower = lower
         self._lower_op = lower_op
-        self._key = supported_types_for_key(self, key)
+        self._key = types_supported_as_key(self, key)
         self._upper_op = upper_op
         self._upper = upper
 
+    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
     def __call__(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
@@ -342,6 +364,7 @@ class In(Eq):
     def __init__(self, key, *right):
         super(In, self).__init__(key, right)
 
+    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
     def __call__(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
@@ -384,6 +407,7 @@ class NotIn(In):
     def __init__(self, key, *right):
         super(NotIn, self).__init__(key, *right)
 
+    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
     def __call__(self, ctx):
         (obj, err) = super(NotIn, self).__call__(ctx)
         return not obj if obj in (True, False,) else obj, err
@@ -405,6 +429,7 @@ class All(Criteria):
 
         self._many = many
 
+    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
     def __call__(self, ctx):
         positive = 0
         first_error = None
@@ -438,6 +463,7 @@ class All(Criteria):
 
 class Any(All):
 
+    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
     def __call__(self, ctx):
         negative = 0
         first_error = None
@@ -515,6 +541,7 @@ class Not(Criteria):
 
         self._one = one
 
+    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
     def __call__(self, ctx):
         (obj, err) = self._one(ctx)
         return not obj if obj in (True, False,) else obj, err
@@ -557,16 +584,12 @@ AST_OP_TO_OPERATOR_MAP = {
 
 
 def quote(obj):
-    if isinstance(obj, str):
-        return "'%s'" % obj
-    else:
-        return "%s" % obj
+    return ("'%s'" if isinstance(obj, str) else "%s") % obj
 
 
 def to_criteria(text):
     data = []
-    node = ast.parse(text, mode='eval')
-    visit(node, data)
+    visit(ast.parse(text, mode='eval'), data)
     return data.pop()
 
 

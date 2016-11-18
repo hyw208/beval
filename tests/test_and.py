@@ -1,121 +1,138 @@
 import unittest
-from criteria import Criteria, Eq, NotEq, And, All, cTrue, cFalse
-from tests.test_all import BaseCriteriaTest
+from unittest import TestCase
+from criteria import Criteria, Eq, NotEq, And, All, cTrue, cFalse, Ctx
+from test_helper import acura_small as acura, CompareError
 
 
-class TestAnd(BaseCriteriaTest):
+class TestAnd(TestCase):
 
-    def test_and_simple_boolean(self):
+    def test_simple_boolean(self):
+        ctx = Ctx({})
+
         and_ = And(cTrue, cTrue)
-        (obj, err) = and_(self.stdCtx)
+        (obj, err) = and_(ctx)
         self.assertTrue(obj)
         self.assertIsNone(err)
 
         all_ = All(cTrue, cTrue)
-        obj_, err_ = all_(self.stdCtx)
+        obj_, err_ = all_(ctx)
         self.assertEqual(obj, obj_)
         self.assertEqual(err, err_)
 
         and_ = And(cTrue, cFalse)
-        (obj, err) = and_(self.stdCtx)
+        (obj, err) = and_(ctx)
         self.assertFalse(obj)
         self.assertIsNone(err)
 
         all_ = All(cTrue, cFalse)
-        obj_, err_ = all_(self.stdCtx)
+        obj_, err_ = all_(ctx)
         self.assertEqual(obj, obj_)
         self.assertEqual(err, err_)
 
         and_ = And(cFalse, cTrue)
-        (obj, err) = and_(self.stdCtx)
+        (obj, err) = and_(ctx)
         self.assertFalse(obj)
         self.assertIsNone(err)
 
         all_ = All(cFalse, cTrue)
-        obj_, err_ = all_(self.stdCtx)
+        obj_, err_ = all_(ctx)
         self.assertEqual(obj, obj_)
         self.assertEqual(err, err_)
 
         and_ = And(cFalse, cFalse)
-        (obj, err) = and_(self.stdCtx)
+        (obj, err) = and_(ctx)
         self.assertFalse(obj)
         self.assertIsNone(err)
 
         all_ = All(cFalse, cFalse)
-        obj_, err_ = all_(self.stdCtx)
+        obj_, err_ = all_(ctx)
         self.assertEqual(obj, obj_)
         self.assertEqual(err, err_)
 
-    def test_and_and_nesting(self):
+    def test_nesting_conditions(self):
+        ctx = Ctx(acura)
+
         and_ = And(
-            Eq("last_name", "Duke"),
-            Eq("first_name", "John")
+            Eq("type", "Small"),
+            Eq("make", "Acura")
         )
         and_ = And(
             and_,
-            Eq("age", 31)
+            Eq("maxprice", 18.8)
         )
         and_ = And(
-            NotEq("hair", "straight"),
+            NotEq("source", "USA"),
             and_
         )
-        (obj, err) = and_(self.john_duke)
+        (obj, err) = and_(ctx)
         self.assertTrue(obj)
         self.assertIsNone(err)
 
-        all_ = All(NotEq("hair", "straight"), Eq("last_name", "Duke"), Eq("first_name", "John"), Eq("age", 31))
-        obj_, err_ = all_(self.john_duke)
+        all_ = All(NotEq("source", "USA"), Eq("type", "Small"), Eq("make", "Acura"), Eq("maxprice", 18.8))
+        obj_, err_ = all_(ctx)
         self.assertEqual(obj, obj_)
         self.assertEqual(err, err_)
 
     def test_and_nesting_err(self):
-        and_ = And(self.true_key_error_lf, self.true_key_error_rf)
-        and_ = And(and_, self.true_key_error_r2nd)
-        (obj, err) = and_(self.stdCtx)
-        self.assertTrue(obj)
-        self.assertIsNotNone(err)
-        self.assertEqual(err.message, "left first")
+        with acura:
+            acura.set_access_error("make", Exception("left first"))
+            acura.set_access_error("source", KeyError("right 2nd"))
+            ctx = Ctx(acura, True)
 
-        and_ = And(self.true_key_error_lf, self.true_key_error_rf)
-        and_ = And(self.true_key_error_r2nd, and_)
-        (obj, err) = and_(self.stdCtx)
-        self.assertTrue(obj)
-        self.assertIsNotNone(err)
-        self.assertEqual(err.message, "left 2nd")
+            and_ = Criteria().Eq("make", "Acura").Eq("type", "Small").And().Eq("source", "nonUSA").And().Done()
+            (obj, err) = and_(ctx)
+            self.assertTrue(obj)
+            self.assertIsNotNone(err)
+            self.assertEqual(err.message, "cannot find item make")
 
-    def test_and_left_true(self):
-        # left.true, right.true
-        and_ = And(self.true_key_error_lf, self.true_key_error_rf)
-        (obj, err) = and_(self.stdCtx)
-        self.assertTrue(obj)
-        self.assertIsNotNone(err)
-        self.assertEqual(err.message, "left first")
+            and_ = Criteria().Eq("source", "nonUSA").Eq("make", "Acura").Eq("type", "Small").And().And().Done()
+            (obj, err) = and_(ctx)
+            self.assertTrue(obj)
+            self.assertIsNotNone(err)
+            self.assertEqual(err.message, "cannot find item source")
 
-        # left.true, right.error, fuzzy.true
-        and_ = And(cTrue, self.true_key_error_rf)
-        (obj, err) = and_(self.fuzzyCtx)
-        self.assertTrue(obj)
-        self.assertIsNotNone(err)
-        self.assertEqual(err.message, "right first")
+    def test_and_left_cmp_error(self):
+        with acura:
+            ctx = Ctx(acura, True)
+            acura.set_compare_error("make", CompareError(Exception("left first")))
+            acura.set_compare_error("source", CompareError(KeyError("right first")))
+            make = ctx["make"]
+            source = ctx["source"]
 
-        # left.true, right.error, fuzzy.false
-        and_ = And(cTrue, self.none_error_rf)
-        (obj, err) = and_(self.stdCtx)
-        self.assertEqual(obj, Criteria.ERROR)
-        self.assertIsNotNone(err)
-        self.assertEqual(err.message, "right first")
+            (obj, err) = Eq("make", "xxx")(ctx)
+            self.assertEqual(obj, Criteria.UNKNOWN)
+            self.assertIsInstance(err, Exception)
+            self.assertEqual(err.message, "left first")
 
-        # left.true, right.unknown, fuzzy.true
-        and_ = And(cTrue, self.unknown_none)
-        (obj, err) = and_(self.fuzzyCtx)
-        self.assertTrue(obj)
-        self.assertIsNone(err)
+            (obj, err) = Eq("source", "xxx")(ctx)
+            self.assertEqual(obj, Criteria.UNKNOWN)
+            self.assertIsInstance(err, KeyError)
+            self.assertEqual(err.message, "right first")
 
-        # left.true, right.unknown, fuzzy.false
-        and_ = And(cTrue, self.unknown_none)
-        (obj, err) = and_(self.stdCtx)
-        self.assertEqual(obj, Criteria.ERROR)
-        self.assertIsNone(err)
+            and_ = Criteria().Eq("make", "xxx").Eq("source", "yyy").And().Done()
+            (obj, err) = and_(ctx)
+            self.assertEqual(obj, Criteria.UNKNOWN)
+            self.assertIsInstance(err, Exception)
+            self.assertEqual(err.message, "left first")
+
+        with acura:
+            ctx = Ctx(acura, True)
+            acura.set_compare_error("source", CompareError(KeyError("right first")))
+            make = ctx["make"]
+            source = ctx["source"]
+
+            and_ = And(cTrue, Eq("source", "xxx"))
+            (obj, err) = and_(ctx)
+            self.assertTrue(obj)
+            self.assertIsInstance(err, KeyError)
+            self.assertEqual(err.message, "right first")
+
+            ctx = Ctx(acura, False)
+            and_ = And(cTrue, Eq("source", "xxx"))
+            (obj, err) = and_(ctx)
+            self.assertEqual(obj, Criteria.ERROR)
+            self.assertIsInstance(err, KeyError)
+            self.assertEqual(err.message, "right first")
 
 
 if __name__ == '__main__':

@@ -1,12 +1,12 @@
 import unittest
+from unittest import TestCase
 from criteria import Criteria, Ctx, Bool, cTrue, cFalse, Not
-from tests.test_all import BaseCriteriaTest
 
 
-class TestBool(BaseCriteriaTest):
+class TestBool(TestCase):
 
     def test_basic_init(self):
-        for ctx in [self.stdEmptyCtx, self.fuzzyEmptyCtx]:
+        for ctx in [Ctx({}, False), Ctx({}, True)]:
             for c in [cTrue, Bool(True), Bool('True'), Bool(1)]:
                 (obj, err) = c(ctx)
                 self.assertTrue(obj)
@@ -17,7 +17,7 @@ class TestBool(BaseCriteriaTest):
                 self.assertFalse(obj)
                 self.assertIsNone(err)
 
-    def test_supported_values(self):
+    def test_basic_compare(self):
         values = ['True', True, 'true', 'tRUE', 1]
         active = Bool("active")
         for value in values:
@@ -32,76 +32,61 @@ class TestBool(BaseCriteriaTest):
             self.assertIsNone(err)
 
         values = [False, 'False', 'false', 'fALSE', 0]
-        sunny = Bool("sunny")
+        active = Bool("active")
         for value in values:
-            ctx = Ctx({"sunny": value})
-            (obj, err) = sunny(ctx)
+            ctx = Ctx({"active": value})
+            (obj, err) = active(ctx)
             self.assertFalse(obj)
             self.assertIsNone(err)
 
-            not_sunny = Not(sunny)
-            (obj, err) = not_sunny(ctx)
+            not_active = Not(active)
+            (obj, err) = not_active(ctx)
             self.assertTrue(obj)
             self.assertIsNone(err)
 
-    def test_unsupported_types_set_directly(self):
-        """ set directly in __init__ """
-        for ctx in [self.stdCtx, self.fuzzyCtx]:
-            for value in [("test", "test"), {"test": "test"}, ]:
-                with self.assertRaises(TypeError):
-                    bool_ = Bool(value)
+    def test_unsupported_types(self):
+        # direct injection into bool constructor
+        for value in [(1,2,3), {"d": "d"}, ]:
+            with self.assertRaises(TypeError):
+                bool_ = Bool(value)
 
-        """ set as value fetched from ctx """
-        sunny = Bool('sunny')
-        for fuzzy, err_ in [(False, Criteria.ERROR), (True, Criteria.UNKNOWN)]:
-            for value in [("test", "test"), {"test": "test"}, ]:
-                obj, err = sunny(Ctx({'sunny': value}, fuzzy))
-                self.assertEqual(obj, err_)
+        # indirect injection as value looked up during comp
+        for fuzzy in [True, False]:
+            for value in [(1, 2, 3), {"d": "d"}, ]:
+                active = Bool('active')
+                (ans, err) = active(Ctx({"active": value}, fuzzy))
                 self.assertIsInstance(err, TypeError)
 
     def test_ser(self):
-        bool_ = Bool(True)
-        text = str(bool_)
-        self.assertEqual(text, 'True')
-        (ans, err) = bool_(self.stdEmptyCtx)
-        self.assertTrue(ans)
-        self.assertIsNone(err)
+        for value, expected in ((True, 'True'), ('True', 'True'), (1, '1'),):
+            bool_ = Bool(value)
+            self.assertEqual(str(bool_), expected)
+            for ctx in (Ctx({}, False), Ctx({}, True),):
+                (ans, err) = bool_(ctx)
+                self.assertTrue(ans)
+                self.assertIsNone(err)
 
-        bool_ = Bool('True')
-        text = str(bool_)
-        self.assertEqual(text, 'True')
-        (ans, err) = bool_(self.stdEmptyCtx)
-        self.assertTrue(ans)
-        self.assertIsNone(err)
+        for value, expected in ((False, 'False'), ('False', 'False'), (0, '0'),):
+            bool_ = Bool(value)
+            self.assertEqual(str(bool_), expected)
+            for ctx in (Ctx({}, False), Ctx({}, True),):
+                (ans, err) = bool_(ctx)
+                self.assertFalse(ans)
+                self.assertIsNone(err)
 
-        bool_ = Bool(1)
-        text = str(bool_)
-        self.assertEqual(text, '1')
-        (ans, err) = bool_(self.stdEmptyCtx)
-        self.assertTrue(ans)
-        self.assertIsNone(err)
+        active = Bool('active')
+        text = str(active)
+        self.assertEqual(text, 'active')
 
-        bool_ = Bool('funny')
-        text = str(bool_)
-        self.assertEqual(text, 'funny')
-        (ans, err) = bool_(Ctx({"funny": True}))
-        self.assertTrue(ans)
-        self.assertIsNone(err)
-        (ans, err) = bool_(Ctx({"funny": 'True'}))
-        self.assertTrue(ans)
-        self.assertIsNone(err)
-        (ans, err) = bool_(Ctx({"funny": 1}))
-        self.assertTrue(ans)
-        self.assertIsNone(err)
-        (ans, err) = bool_(Ctx({"funny": 0}))
-        self.assertFalse(ans)
-        self.assertIsNone(err)
-        (ans, err) = bool_(Ctx({"funny": False}))
-        self.assertFalse(ans)
-        self.assertIsNone(err)
-        (ans, err) = bool_(Ctx({"funny": 'False'}))
-        self.assertFalse(ans)
-        self.assertIsNone(err)
+        for value in (True, 'True', 1):
+            (ans, err) = active(Ctx({"active": value}))
+            self.assertTrue(ans)
+            self.assertIsNone(err)
+
+        for value in (False, 'False', 0):
+            (ans, err) = active(Ctx({"active": value}))
+            self.assertFalse(ans)
+            self.assertIsNone(err)
 
 
 if __name__ == '__main__':

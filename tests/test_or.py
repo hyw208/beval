@@ -1,91 +1,143 @@
 import unittest
-from criteria import Eq, cTrue, cFalse, Or, Any, to_criteria
-from tests.test_all import BaseCriteriaTest
+from unittest import TestCase
+from criteria import Criteria, Ctx, LtE, Lt, Between, to_criteria, cTrue, cFalse, Or, Any, Eq
+from test_helper import acura_small
+import operator
 
 
-class TestOr(BaseCriteriaTest):
+class TestOr(TestCase):
 
     def test_and_simple_boolean(self):
         or_ = Or(cTrue, cTrue)
-        (ans, err) = or_(self.stdEmptyCtx)
+        (ans, err) = or_(Ctx({}))
         self.assertTrue(ans)
         self.assertIsNone(err)
+
+        text = str(or_)
+        or2_ = to_criteria(text)
+        text2 = str(or2_)
+        self.assertEqual(text, text2)
 
         any_ = Any(cTrue, cTrue)
-        (ans_, err_) = any_(self.stdEmptyCtx)
+        (ans_, err_) = any_(Ctx({}))
         self.assertEqual(ans, ans_)
         self.assertEqual(err, err_)
+
+        text = str(any_)
+        """ since there are only 2 operands, it's considered Or during parsing"""
+        or2_ = to_criteria(text)
+        self.assertIsInstance(or2_, Or)
+        """ therefore during ser, it's different from str of any """
+        text2 = str(or2_)
+        self.assertNotEqual(text, text2)
 
         or_ = Or(cTrue, cFalse)
-        (ans, err) = or_(self.stdEmptyCtx)
+        (ans, err) = or_(Ctx({}))
         self.assertTrue(ans)
         self.assertIsNone(err)
+
+        text = str(or_)
+        or2_ = to_criteria(text)
+        text2 = str(or2_)
+        self.assertEqual(text, text2)
 
         any_ = Any(cTrue, cFalse)
-        (ans_, err_) = any_(self.stdEmptyCtx)
+        (ans_, err_) = any_(Ctx({}))
         self.assertEqual(ans, ans_)
         self.assertEqual(err, err_)
 
+        text = str(any_)
+        """ since there are only 2 operands, it's considered Or during parsing"""
+        or2_ = to_criteria(text)
+        self.assertIsInstance(or2_, Or)
+        """ therefore during ser, it's different from str of any """
+        text2 = str(or2_)
+        self.assertNotEqual(text, text2)
+
         or_ = Or(cFalse, cTrue)
-        (ans, err) = or_(self.stdEmptyCtx)
+        (ans, err) = or_(Ctx({}))
         self.assertTrue(ans)
         self.assertIsNone(err)
 
+        text = str(or_)
+        or2_ = to_criteria(text)
+        text2 = str(or2_)
+        self.assertEqual(text, text2)
+
         any_ = Any(cFalse, cTrue)
-        (ans_, err_) = any_(self.stdEmptyCtx)
+        (ans_, err_) = any_(Ctx({}))
         self.assertEqual(ans, ans_)
         self.assertEqual(err, err_)
 
+        text = str(any_)
+        """ since there are only 2 operands, it's considered Or during parsing"""
+        or2_ = to_criteria(text)
+        self.assertIsInstance(or2_, Or)
+        """ therefore during ser, it's different from str of any """
+        text2 = str(or2_)
+        self.assertNotEqual(text, text2)
+
         or_ = Or(cFalse, cFalse)
-        (ans, err) = or_(self.stdEmptyCtx)
+        (ans, err) = or_(Ctx({}))
         self.assertFalse(ans)
         self.assertIsNone(err)
 
+        text = str(or_)
+        or2_ = to_criteria(text)
+        text2 = str(or2_)
+        self.assertEqual(text, text2)
+
         any_ = Any(cFalse, cFalse)
-        (ans_, err_) = any_(self.stdEmptyCtx)
+        (ans_, err_) = any_(Ctx({}))
         self.assertEqual(ans, ans_)
         self.assertEqual(err, err_)
+
+        text = str(any_)
+        """ since there are only 2 operands, it's considered Or during parsing"""
+        or2_ = to_criteria(text)
+        self.assertIsInstance(or2_, Or)
+        """ therefore during ser, it's different from str of any """
+        text2 = str(or2_)
+        self.assertNotEqual(text, text2)
 
     def test_and_and_nesting(self):
-        or_ = Or(
-            Eq("last_name", "Duke"),
-            Eq("first_name", "John")
-        )
-        or_ = Or(
-            or_,
-            Eq("age", 31)
-        )
-        or_ = Or(
-            Eq("hair", "straight"),
-            or_
-        )
-        (ans, err) = or_(self.john_duke)
-        self.assertTrue(ans)
-        self.assertIsNone(err)
+        with acura_small as acura:
+            ctx = Ctx(acura)
 
-        any_ = Any(Eq("hair", "straight"), Eq("last_name", "Duke"), Eq("first_name", "John"), Eq("age", 31))
-        (ans_, err_) = any_(self.john_duke)
-        self.assertEqual(ans, ans_)
-        self.assertEqual(err, err_)
+            expected = "(source == 'USA' or ((make == 'Mazda' or type == 'Midsize') or maxprice == 18.8))"
+            or_ = Or(
+                Eq("source", "USA"),
+                Or(
+                    Or(
+                        Eq("make", "Mazda"),
+                        Eq("type", "Midsize")
+                    ),
+                    Eq("maxprice", 18.8)
+                )
+            )
+            (ans, err) = or_(ctx)
+            text = str(or_)
+            self.assertEqual(expected, text)
+            self.assertTrue(ans)
+            self.assertIsNone(err)
 
-    def test_ser(self):
-        any_ = Any(Eq("hair", "straight"), Eq("last_name", "Duke"), Eq("first_name", "John"), Eq("age", 31))
-        text = str(any_)
-        any2_ = to_criteria(text)
-        text2 = str(any2_)
-        self.assertEqual(text, text2)
+            or2_ = to_criteria(expected)
+            self.assertIsInstance(or2_, Or)
+            self.assertEqual(expected, str(or2_))
 
-        or_ = Or(cFalse, cTrue)
-        text = str(or_)
-        or2_ = to_criteria(text)
-        text2 = str(or2_)
-        self.assertEqual(text, text2)
+            expected = "source == 'USA' or make == 'Mazda' or type == 'Midsize' or maxprice == 18.8"
+            any_ = Any(Eq("source", "USA"), Eq("make", "Mazda"), Eq("type", "Midsize"), Eq("maxprice", 18.8))
+            text = str(any_)
+            self.assertEqual(expected, text)
+            (ans_, err_) = any_(ctx)
+            self.assertTrue(ans)
+            self.assertEqual(ans, ans_)
+            self.assertEqual(err, err_)
+            self.assertNotEqual(str(or_), str(any_))
 
-        or_ = Or(Eq("hair", "straight"), Eq("last_name", "Duke"))
-        text = str(or_)
-        or2_ = to_criteria(text)
-        text2 = str(or2_)
-        self.assertEqual(text, text2)
+            any2_ = to_criteria(expected)
+            self.assertIsInstance(any2_, Any)
+            self.assertEqual(expected, str(any2_))
 
 
 if __name__ == '__main__':

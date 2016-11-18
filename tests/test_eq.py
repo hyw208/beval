@@ -1,66 +1,98 @@
 import unittest
+from unittest import TestCase
 import operator
-from criteria import Criteria, Eq, NotEq, Ctx, Gt, LtE, to_criteria
-from tests.test_all import BaseCriteriaTest
+from criteria import Criteria, Eq, NotEq, Ctx, Gt, LtE, to_criteria, And, All, Or
+from test_helper import acura_small, acura_midsize
 
 
-class TestEq(BaseCriteriaTest):
+class TestEq(TestCase):
 
     def test_eq_positive(self):
-        eq = Eq("first_name", "John")
-        (ans, err) = eq(self.john_duke)
-        self.assertTrue(ans)
-        self.assertIsNone(err)
+        with acura_small as acura:
+            eq = Eq("make", "Acura")
+            (ans, err) = eq(Ctx(acura))
+            self.assertTrue(ans)
+            self.assertIsNone(err)
 
     def test_eq_negative(self):
-        eq = Eq("first_name", "Paul")
-        (ans, err) = eq(self.john_duke)
-        self.assertFalse(ans)
-        self.assertIsNone(err)
+        with acura_small as acura:
+            eq = Eq("make", "acura")
+            (ans, err) = eq(Ctx(acura))
+            self.assertFalse(ans)
+            self.assertIsNone(err)
 
-    def test_eq_unknown_fuzzy_true(self):
-        eq = Eq("middle_name", "Joe")
-        (ans, error) = eq(self.john_duke)
-        self.assertTrue(self.john_duke.fuzzy)
-        self.assertEqual(ans, Criteria.UNKNOWN)
-        self.assertIsInstance(error, KeyError)
+    def test_eq_missing_attribute(self):
+        with acura_small as acura:
+            eq = Eq("cpu", "Intel")
+            ctx = Ctx(acura, True)
+            (ans, error) = eq(ctx)
+            self.assertTrue(ctx.fuzzy)
+            self.assertEqual(ans, Criteria.UNKNOWN)
+            self.assertIsInstance(error, KeyError)
 
-    def test_eq_unknown_fuzzy_false(self):
-        eq = Eq("middle_name", "Joe")
-        john_duke_copy = Ctx( self.john_duke.one, False)
-        ans, error = eq(john_duke_copy)
-        self.assertEqual(ans, Criteria.ERROR)
-        self.assertIsInstance(error, KeyError)
+            ctx = Ctx(acura, False)
+            (ans, error) = eq(ctx)
+            self.assertFalse(ctx.fuzzy)
+            self.assertEqual(ans, Criteria.ERROR)
+            self.assertIsInstance(error, KeyError)
 
     def test_ser_eq(self):
-        eq = Eq("name", "John")
+        eq = Eq("make", "Acura")
         text = str(eq)
-        self.assertEqual(text, "name == 'John'")
+        self.assertEqual(text, "make == 'Acura'")
 
-        eq = Eq("price", 1002)
+        eq = Eq("price", 18.8)
         text = str(eq)
-        self.assertEqual(text, "price == 1002")
+        self.assertEqual(text, "price == 18.8")
 
-        eq = Eq("pass", True)
+        eq = Eq("american", True)
         text = str(eq)
-        self.assertEqual(text, "pass == True")
+        self.assertEqual(text, "american == True")
+
+        and_ = And(Eq("make", "Acura"), Eq("price", 18.8))
+        text = str(and_)
+        self.assertEqual(text, "(make == 'Acura' and price == 18.8)")
+
+        all_ = All(Eq("make", "Acura"), Eq("price", 18.8), Eq("american", True))
+        text = str(all_)
+        self.assertEqual(text, "make == 'Acura' and price == 18.8 and american == True")
+
+
+class TestNotEq(TestCase):
 
     def test_ser_not_eq(self):
-        not_eq = NotEq("name", "John")
-        text = str(not_eq)
-        self.assertEqual(text, "name != 'John'")
+        with acura_midsize as acura:
+            eq = Eq("type", "Midsize")
+            (ans, err) = eq(Ctx(acura))
+            self.assertTrue(ans)
+            self.assertIsNone(err)
+            text = str(eq)
+            self.assertEqual(text, "type == 'Midsize'")
 
-        not_eq = NotEq("price", 1002)
-        text = str(not_eq)
-        self.assertEqual(text, "price != 1002")
+            not_eq = NotEq("type", "Midsize")
+            (ans, err) = not_eq(Ctx(acura))
+            self.assertFalse(ans)
+            self.assertIsNone(err)
+            text = str(not_eq)
+            self.assertEqual(text, "type != 'Midsize'")
 
-        not_eq = NotEq("pass", True)
-        text = str(not_eq)
-        self.assertEqual(text, "pass != True")
+            not_eq = NotEq("maxprice", 19.9)
+            (ans, err) = not_eq(Ctx(acura))
+            self.assertTrue(ans)
+            self.assertIsNone(err)
+            text = str(not_eq)
+            self.assertEqual(text, "maxprice != 19.9")
+
+            not_eq = NotEq("pass", True)
+            text = str(not_eq)
+            self.assertEqual(text, "pass != True")
+
+
+class TestGt(TestCase):
 
     def test_ser_gt(self):
-        expected = "price > 0.99"
-        gt = Gt("price", 0.99)
+        expected = "maxprice > 0.99"
+        gt = Gt("maxprice", 0.99)
         text = str(gt)
         self.assertEqual(expected, text)
 

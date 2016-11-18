@@ -1,56 +1,63 @@
 import unittest
 from unittest import TestCase
 from criteria import Criteria, Ctx, LtE, Lt, Between, to_criteria
-from tests.test_all import BaseCriteriaTest
+from test_helper import acura_small
+import operator
 
 
-class TestBetween(BaseCriteriaTest):
+class TestBetween(TestCase):
 
     def test_btw_simple(self):
-        btw_ = Between(100, "price", 200)  # 100 <= price < 200
-        ans, err = btw_(self.stdCtx)
-        self.assertTrue(ans)
-        self.assertIsNone(err)
+        with acura_small as acura:
+            ctx = Ctx(acura)
 
-        btw_ = Between(99, "price", 101)  # 99 <= price < 101
-        ans, err = btw_(self.stdCtx)
-        self.assertTrue(ans)
-        self.assertIsNone(err)
+            btw_ = Between(18.7, "maxprice", 18.9)
+            (ans, err) = btw_(ctx)
+            self.assertTrue(ans)
+            self.assertIsNone(err)
 
-        btw_ = Between(101, "price", 200)  # 101 <= price < 200
-        ans, err = btw_(self.stdCtx)
-        self.assertFalse(ans)
-        self.assertIsNone(err)
+            btw_ = Between(18.8, "maxprice", 18.9)
+            (ans, err) = btw_(ctx)
+            self.assertTrue(ans)
+            self.assertIsNone(err)
 
-        btw_ = Between(60, "price", 100)  # 60 <= price < 100
-        ans, err = btw_(self.stdCtx)
-        self.assertFalse(ans)
-        self.assertIsNone(err)
+            btw_ = Between(18.9, "maxprice", 19.0)
+            (ans, err) = btw_(ctx)
+            self.assertFalse(ans)
+            self.assertIsNone(err)
 
-    def test_missing_info_fuzzy_off(self):
-        btw_ = Between(100, "price", 200)  # 100 <= price < 200
-        ans, err = btw_(self.stdEmptyCtx)
-        self.assertEqual(ans, Criteria.ERROR)
-        self.assertIsInstance(err, KeyError)
+            btw_ = Between(18.7, "maxprice", 18.8)
+            (ans, err) = btw_(ctx)
+            self.assertFalse(ans)
+            self.assertIsNone(err)
 
-    def test_fuzzy_on(self):
-        btw_ = Between(100, "price", 200)  # 100 <= price < 200
-        ans, err = btw_(self.fuzzyEmptyCtx)
-        self.assertEqual(ans, Criteria.UNKNOWN)
-        self.assertIsInstance(err, KeyError)
+    def test_missing_info(self):
+        for ctx, expected in [(Ctx({}, False), Criteria.ERROR), (Ctx({}, True), Criteria.UNKNOWN)]:
+            btw_ = Between(10, "price", 20)
+            (ans, err) = btw_(ctx)
+            self.assertEqual(ans, expected)
+            self.assertIsInstance(err, KeyError)
 
     def test_ser(self):
         expected = "234 < score <= 456"
         btw = to_criteria(expected)
+        self.assertIsInstance(btw, Between)
+        self.assertEqual(btw.lower, 234)
+        self.assertEqual(btw.lower_op, operator.lt)
+        self.assertEqual(btw.key, "score")
+        self.assertEqual(btw.upper_op, operator.le)
+        self.assertEqual(btw.upper, 456)
         text = str(btw)
         self.assertEqual(expected, text)
 
     def test_no_key(self):
+        ctx = Ctx({})
+
         expected = "1 <= 2 < 3"
         btw = to_criteria(expected)
         text = str(btw)
         self.assertEqual(expected, text)
-        (ans, err) = btw(self.stdEmptyCtx)
+        (ans, err) = btw(ctx)
         self.assertTrue(ans)
         self.assertIsNone(err)
 
@@ -58,7 +65,7 @@ class TestBetween(BaseCriteriaTest):
         btw = to_criteria(expected)
         text = str(btw)
         self.assertEqual(expected, text)
-        (ans, err) = btw(self.stdEmptyCtx)
+        (ans, err) = btw(ctx)
         self.assertFalse(ans)
         self.assertIsNone(err)
 
