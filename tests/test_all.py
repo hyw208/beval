@@ -1,7 +1,7 @@
 import unittest
 from unittest import TestCase
 from criteria import Criteria, Ctx, Between, All, And, to_criteria, Eq
-from test_helper import acura_small as acura
+from test_helper import acura_small as acura, CompareError
 
 
 class TestAll(TestCase):
@@ -17,6 +17,57 @@ class TestAll(TestCase):
         (ans_, err_) = and_(ctx)
         self.assertEqual(ans, ans_)
         self.assertEqual(err, err_)
+
+    def test_precise_vs_fuzzy(self):
+        """ test all """
+        with acura:
+            """ mock so that 'make' causing comparison error """
+            acura.set_compare_error("make", CompareError(Exception("left first")))
+
+            for all_ in (Criteria().Eq("make", "Acura").Between(15, "maxprice", 20.1).NotEq("source", "USA").Eq("type", "Small").All().Done(), \
+                          Criteria().Between(15, "maxprice", 20.1).NotEq("source", "USA").Eq("type", "Small").Eq("make", "Acura").All().Done(),):
+                """ precise match """
+                ctx = Ctx(acura, False)
+                (ans, err) = all_(ctx)
+                self.assertEqual(ans, Criteria.ERROR)
+
+                """ fuzzy match """
+                ctx = Ctx(acura, True)
+                (ans_, err_) = all_(ctx)
+                self.assertTrue(ans_)
+                self.assertEqual(err.message, err_.message)
+
+        """ similarly, test for Any """
+        with acura:
+            """ mock so that 'make' causing comparison error """
+            acura.set_compare_error("make", CompareError(Exception("left first")))
+
+            any_ = Criteria().Eq("make", "Acura").Between(15, "maxprice", 20.1).NotEq("source", "USA").Eq("type", "Small").Any().Done()
+
+            """ precise match """
+            ctx = Ctx(acura, False)
+            (ans, err) = any_(ctx)
+            self.assertEqual(ans, Criteria.ERROR)
+
+            """ fuzzy match """
+            ctx = Ctx(acura, True)
+            (ans_, err_) = any_(ctx)
+            self.assertTrue(ans_)
+            self.assertEqual(err.message, err_.message)
+
+            any_ = Criteria().Between(15, "maxprice", 20.1).NotEq("source", "USA").Eq("type", "Small").Eq("make", "Acura").Any().Done()
+
+            """ precise match """
+            ctx = Ctx(acura, False)
+            (ans, err) = any_(ctx)
+            self.assertTrue(ans)
+            self.assertIsNone(err)
+
+            """ fuzzy match """
+            ctx = Ctx(acura, True)
+            (ans_, err_) = any_(ctx)
+            self.assertTrue(ans)
+            self.assertIsNone(err)
 
     def test_all_negative(self):
         ctx = Ctx(acura)
