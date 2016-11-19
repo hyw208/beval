@@ -37,7 +37,7 @@ def types_supported_as_key(criteria, key):
 
 
 def assert_outcomes_d_w_a(std_types, fuzzy_types):
-
+    """ remove this decorator after fully tested with use cases """
     def assert_outcomes_d(func):
 
         def decorated(criteria, ctx):
