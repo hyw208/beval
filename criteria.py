@@ -41,7 +41,7 @@ def assert_outcomes_d_w_a(std_types, fuzzy_types):
     def assert_outcomes_d(func):
 
         def decorated(criteria, ctx):
-            outcomes = fuzzy_types if ctx.fuzzy else std_types
+            outcomes = fuzzy_types if hasattr(ctx, 'fuzzy') and ctx.fuzzy else std_types
             (ans, err) = func(criteria, ctx)
 
             if ans not in outcomes:
@@ -60,7 +60,12 @@ class Criteria(object):
     UNKNOWN = '__UNKNOWN__'
     ERROR = '__ERROR__'
 
-    def __call__(self, ctx):
+    @assert_outcomes_d_w_a([True, False, ERROR], [True, False, UNKNOWN])
+    def __call__(self, obj, fuzzy=False):
+        ctx = obj if isinstance(obj, Ctx) else Ctx(obj, fuzzy)
+        return self.call(ctx)
+
+    def call(self, ctx):
         raise NotImplementedError
 
     def fuzzy(self, ctx):
@@ -217,8 +222,7 @@ class Bool(Criteria):
     def __init__(self, key):
         self._key = types_supported_as_key(self, key)
 
-    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
-    def __call__(self, ctx):
+    def call(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
@@ -265,8 +269,7 @@ class Eq(Criteria):
         self._key = types_supported_as_key(self, key)
         self._right = right
 
-    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
-    def __call__(self, ctx):
+    def call(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
@@ -339,8 +342,7 @@ class Between(Criteria):
         self._upper_op = upper_op
         self._upper = upper
 
-    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
-    def __call__(self, ctx):
+    def call(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
@@ -364,8 +366,7 @@ class In(Eq):
     def __init__(self, key, *right):
         super(In, self).__init__(key, right)
 
-    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
-    def __call__(self, ctx):
+    def call(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
@@ -407,9 +408,8 @@ class NotIn(In):
     def __init__(self, key, *right):
         super(NotIn, self).__init__(key, *right)
 
-    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
-    def __call__(self, ctx):
-        (obj, err) = super(NotIn, self).__call__(ctx)
+    def call(self, ctx):
+        (obj, err) = super(NotIn, self).call(ctx)
         return not obj if obj in (True, False,) else obj, err
 
     def __str__(self):
@@ -429,8 +429,7 @@ class All(Criteria):
 
         self._many = many
 
-    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
-    def __call__(self, ctx):
+    def call(self, ctx):
         positive = 0
         first_error = None
 
@@ -463,8 +462,7 @@ class All(Criteria):
 
 class Any(All):
 
-    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
-    def __call__(self, ctx):
+    def call(self, ctx):
         negative = 0
         first_error = None
 
@@ -541,8 +539,7 @@ class Not(Criteria):
 
         self._one = one
 
-    @assert_outcomes_d_w_a([True, False, Criteria.ERROR], [True, False, Criteria.UNKNOWN])
-    def __call__(self, ctx):
+    def call(self, ctx):
         (obj, err) = self._one(ctx)
         return not obj if obj in (True, False,) else obj, err
 
