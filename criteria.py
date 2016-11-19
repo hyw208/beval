@@ -63,9 +63,9 @@ class Criteria(object):
     @assert_outcomes_d_w_a([True, False, ERROR], [True, False, UNKNOWN])
     def __call__(self, obj, fuzzy=False):
         ctx = obj if isinstance(obj, Ctx) else Ctx(obj, fuzzy)
-        return self.call(ctx)
+        return self.eval(ctx)
 
-    def call(self, ctx):
+    def eval(self, ctx):
         raise NotImplementedError
 
     def fuzzy(self, ctx):
@@ -222,7 +222,7 @@ class Bool(Criteria):
     def __init__(self, key):
         self._key = types_supported_as_key(self, key)
 
-    def call(self, ctx):
+    def eval(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
@@ -269,7 +269,7 @@ class Eq(Criteria):
         self._key = types_supported_as_key(self, key)
         self._right = right
 
-    def call(self, ctx):
+    def eval(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
@@ -342,7 +342,7 @@ class Between(Criteria):
         self._upper_op = upper_op
         self._upper = upper
 
-    def call(self, ctx):
+    def eval(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
@@ -366,7 +366,7 @@ class In(Eq):
     def __init__(self, key, *right):
         super(In, self).__init__(key, right)
 
-    def call(self, ctx):
+    def eval(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
@@ -408,8 +408,8 @@ class NotIn(In):
     def __init__(self, key, *right):
         super(NotIn, self).__init__(key, *right)
 
-    def call(self, ctx):
-        (obj, err) = super(NotIn, self).call(ctx)
+    def eval(self, ctx):
+        (obj, err) = super(NotIn, self).eval(ctx)
         return not obj if obj in (True, False,) else obj, err
 
     def __str__(self):
@@ -429,7 +429,7 @@ class All(Criteria):
 
         self._many = many
 
-    def call(self, ctx):
+    def eval(self, ctx):
         positive = 0
         first_error = None
 
@@ -462,7 +462,7 @@ class All(Criteria):
 
 class Any(All):
 
-    def call(self, ctx):
+    def eval(self, ctx):
         negative = 0
         first_error = None
 
@@ -539,7 +539,7 @@ class Not(Criteria):
 
         self._one = one
 
-    def call(self, ctx):
+    def eval(self, ctx):
         (obj, err) = self._one(ctx)
         return not obj if obj in (True, False,) else obj, err
 
