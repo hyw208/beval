@@ -613,8 +613,8 @@ def visit(node, data):
                 values.append(obj if isinstance(obj, Criteria) else Bool(obj))
 
             cls = (And if len(values) == 2 else All) \
-                if isinstance(node.op, ast.And) else \
-                    (Or if len(values) == 2 else Any)
+                        if isinstance(node.op, ast.And) else \
+                            (Or if len(values) == 2 else Any)
 
             data.append(cls(*values))
             return
