@@ -158,6 +158,7 @@ CAR_DIMENSIONS = [col.lower() for col in CAR_DF.columns]
 
 CARS = [Car(row) for i, row in CAR_DF.iterrows()]
 
+
 acura_small = CARS[0]
 acura_midsize = CARS[1]
 chevrolet_compact_e = CARS[11]
