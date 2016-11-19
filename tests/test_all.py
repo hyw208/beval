@@ -105,10 +105,19 @@ class TestAll(TestCase):
         self.assertEqual(err.message, err_.message)
 
     def test_ser_all(self):
+        ctx = Ctx(acura)
         expected = "make == 'Acura' and 15 <= maxprice < 20.1 and source != 'USA' and type == 'Small'"
-        all_ = Criteria().Eq("make", "Acura").Between(15, "maxprice", 20.1).NotEq("source", "USA").Eq("type","Small").All().Done()
-        text = str(all_)
-        self.assertEqual(expected, text)
+
+        all_ = to_criteria(expected)
+        all2_ = Criteria().Eq("make", "Acura").Between(15, "maxprice", 20.1).NotEq("source", "USA").Eq("type","Small").All().Done()
+
+        self.assertEqual(expected, str(all_))
+        self.assertEqual(expected, str(all2_))
+
+        (ans, err) = all_(ctx)
+        (ans_, err_) = all2_(ctx)
+        self.assertEqual(ans, ans_)
+        self.assertEqual(err, err_)
 
 
 if __name__ == '__main__':
