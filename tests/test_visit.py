@@ -1,8 +1,8 @@
 import operator
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Ctx, to_criteria, Bool, Between, Not, And, Or, Eq, NotEq, Gt, GtE, All, Any, In
-from test_helper import acura_small
+
+from beval.criteria import Criteria, Ctx, to_criteria, Bool, Between, Not, And, Or, Eq, NotEq, Gt, GtE, All, Any, In
 
 
 class TestVisit(TestCase):

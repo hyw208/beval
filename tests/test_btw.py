@@ -1,8 +1,9 @@
+import operator
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Ctx, LtE, Lt, Between, to_criteria
+
+from beval.criteria import Criteria, Ctx, Between, to_criteria
 from test_helper import acura_small
-import operator
 
 
 class TestBetween(TestCase):

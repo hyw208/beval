@@ -1,6 +1,7 @@
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Eq, NotEq, And, All, cTrue, cFalse, Ctx
+
+from beval.criteria import Criteria, Eq, NotEq, And, All, cTrue, cFalse, Ctx
 from test_helper import acura_small as acura, CompareError
 
 

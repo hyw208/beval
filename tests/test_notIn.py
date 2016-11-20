@@ -1,6 +1,7 @@
 import unittest
 from unittest import TestCase
-from criteria import Ctx, NotIn, to_criteria
+
+from beval.criteria import Ctx, NotIn, to_criteria
 from test_helper import acura_small
 
 

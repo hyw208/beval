@@ -1,7 +1,8 @@
+import operator
 import unittest
 from unittest import TestCase
-import operator
-from criteria import Criteria, NotEq, to_criteria, Ctx
+
+from beval.criteria import Criteria, NotEq, to_criteria, Ctx
 from test_helper import acura_small
 
 

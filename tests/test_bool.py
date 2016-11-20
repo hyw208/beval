@@ -1,6 +1,7 @@
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Ctx, Bool, cTrue, cFalse, Not
+
+from beval.criteria import Ctx, Bool, cTrue, cFalse, Not
 
 
 class TestBool(TestCase):

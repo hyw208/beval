@@ -1,8 +1,8 @@
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Ctx, LtE, Lt, Between, to_criteria, And
+
+from beval.criteria import Criteria, Ctx, to_criteria, And
 from test_helper import acura_midsize as acura, chevrolet_compact_e, chevrolet_compact_c, CARS
-import operator
 
 
 class TestCriteria(TestCase):

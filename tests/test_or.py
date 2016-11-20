@@ -1,8 +1,8 @@
 import unittest
 from unittest import TestCase
-from criteria import Criteria, Ctx, LtE, Lt, Between, to_criteria, cTrue, cFalse, Or, Any, Eq
+
+from beval.criteria import Ctx, to_criteria, cTrue, cFalse, Or, Any, Eq
 from test_helper import acura_small
-import operator
 
 
 class TestOr(TestCase):

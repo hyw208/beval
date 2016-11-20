@@ -1,7 +1,8 @@
 import operator
 import unittest
 from unittest import TestCase
-from criteria import Ctx
+
+from beval.criteria import Ctx
 from test_helper import CompareError, acura_small
 
 
