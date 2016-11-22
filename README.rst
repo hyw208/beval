@@ -1,12 +1,16 @@
-Boolean expression evaluator and criteria
+boolean expression evaluator and criteria
 ===========================
 
 The utility is designed to capture bool expressions as criteria objects and perform evaluations over one to many in-memory objects. For example, given an instance or a list of Car objects, see tests.test_helper for a list of car objects:
 
-    make,   type,   maxprice,   mpgcity,    mpghiway,   airbags,    drivetrain
-    Acura,  Small,  18.8,       25,         31,         None,       Front
-    Ford,   Compact,12.2,       22,         27,         None,       Front
-    ...
++--------+----------+-----------+-----------+-------------+-----------+--------------+
+|  make  |  type    |  maxprice |  mpgcity  |   mpghiway  |  airbags  |   drivetrain |
++========+==========+===========+===========+=============+===========+==============+
+|  Acura |  Small   |  18.8     |  25       |   31        |  None     |   Front      |
++--------+----------+-----------+-----------+-------------+-----------+--------------+
+|  Ford  |  Compact |  12.2     |  22       |   27        |  None     |   Front      |
++--------+----------+-----------+-----------+-------------+-----------+--------------+
+
 
 To define a search criteria where "make" is "Acura", "type" is "Small" and "drivetrain" is "Front", there are 3 options,
 
