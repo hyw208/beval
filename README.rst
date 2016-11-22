@@ -76,6 +76,8 @@ to change the evaluation behavior of a criteria
 When dealing with a bag of objects with inconsistent api or various data quality, the fuzzy search option can be turned on. When the flag is turned on, evaluator continues to evaluate the next criteria despite error accessing non-existent property or exception thrown during comparison. For instance, given an expression with an non-existent property 'cpu':
 
     >>> search_criteria = to_criteria( "cpu == 'Intel' and make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )
+    >>> type(search_criteria)
+    beval.criteria.All
     >>> search_criteria(acura_small, fuzzy=False)
     ('__ERROR__', KeyError('cannot find item cpu'))
     >>> search_criteria(acura_small, fuzzy=True)
