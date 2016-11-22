@@ -19,17 +19,14 @@ To define a search criteria where "make" is "Acura", "type" is "Small" and "driv
 
 option 1, type the string expression and convert it to a criteria object
 
-.. code-block::
     $ search_criteria = to_criteria( "make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )
 
 option 2, specify a criteria in polish notation, sort of
 
-.. code-block::
     $ search_criteria = Criteria().Eq("make", "Acura").Eq("type", "Small").Eq("drivetrain", "Front").All().Done()
 
 option 3, or just compose the criteria object
 
-.. code-block::
     $ search_criteria = All(Eq("make", "Acura"), Eq("type", "Small"), Eq("drivetrain", "Front"))
 
 
@@ -38,17 +35,17 @@ Criteria/Expression evaluation
 ===========================
 To evaluate the criteria, there are also a few options,
 
-option 1, invoke __call__ method with an underlying object or a ctx object:
-.. code-block:: bash
+option 1, invoke __call__ method with an underlying object or a ctx object
+
     $ (ans, err) = search_criteria(acura_small)
     $ (ans, err) = search_criteria(Ctx(acura_small, False))
 
-option 2, invoke eval method, with a ctx object:
-.. code-block:: bash
+option 2, invoke eval method, with a ctx object
+
     $ (ans, err) = search_criteria.eval(Ctx(acura_small, fuzzy=False))
 
-option 3, change return type and behavior:
-.. code-block:: bash
+option 3, change return type and behavior
+
     $ def true_or_false(criteria, obj):
          (ans, err) = criteria(obj)
          if ans in (Criteria.UNKNOWN, Criteria.ERROR,):
@@ -63,7 +60,7 @@ option 3, change return type and behavior:
 Criteria/Expression representation
 ===========================
 Criteria objects can be serialized to string representations and back to objects,
-.. code-block:: bash
+
     $ bool_expr = "make == 'Acura' and type == 'Small' and drivetrain == 'Front'"
     $ search_criteria = to_criteria(bool_expr)
     $ bool_expr = str(search_criteria)
