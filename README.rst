@@ -13,7 +13,7 @@ The utility is designed to capture bool expressions as criteria objects and perf
 
 
 ===========================
-Criteria/Expression creation
+criteria creation
 ===========================
 To define a search criteria where "make" is "Acura", "type" is "Small" and "drivetrain" is "Front", there are 3 options,
 
@@ -31,7 +31,7 @@ option 3, or just compose the criteria object
 
 
 ===========================
-Criteria/Expression evaluation
+criteria evaluation against objects
 ===========================
 To evaluate the criteria, there are also a few options,
 
@@ -57,7 +57,7 @@ option 3, change return type and behavior
 
 
 ===========================
-Criteria/Expression representation
+criteria representations
 ===========================
 Criteria objects can be serialized to string representations and back to objects,
 
@@ -67,7 +67,7 @@ Criteria objects can be serialized to string representations and back to objects
 
 
 ===========================
-Criteria/Expression representation
+criteria control flag and behavior
 ===========================
 When dealing with objects with inconsistent api or data quality issues, the fuzzy search option can be turned on. Fuzzy search will continue to evaluate the next criteria despite error accessing non-existent property or field, and it will ignore any exception thrown during comparison. For instance, given a modified search criteria below:
 
