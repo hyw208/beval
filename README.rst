@@ -19,15 +19,18 @@ To define a search criteria where "make" is "Acura", "type" is "Small" and "driv
 
 option 1, type the string expression and convert it to a criteria object
 
-    $ search_criteria = to_criteria( "make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )::
+.. code-block::
+    $ search_criteria = to_criteria( "make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )
 
 option 2, specify a criteria in polish notation, sort of
 
-    $ search_criteria = Criteria().Eq("make", "Acura").Eq("type", "Small").Eq("drivetrain", "Front").All().Done()::
+.. code-block::
+    $ search_criteria = Criteria().Eq("make", "Acura").Eq("type", "Small").Eq("drivetrain", "Front").All().Done()
 
 option 3, or just compose the criteria object
 
-    $ search_criteria = All(Eq("make", "Acura"), Eq("type", "Small"), Eq("drivetrain", "Front"))::
+.. code-block::
+    $ search_criteria = All(Eq("make", "Acura"), Eq("type", "Small"), Eq("drivetrain", "Front"))
 
 
 ===========================
