@@ -74,7 +74,7 @@ When dealing with objects with inconsistent api or data quality issues, the fuzz
     >>> search_criteria = to_criteria( "cpu == 'Intel' and make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )
     >>> (ans, err) = search_criteria(acura_small, fuzzy=True)
 
-During evaluation against the "All" criteria, it starts with the first "Eq" criteria where cpu == 'Intel'. Since the car object, acura_small, doesn't have such property, missing 'cpu' KeyError is raised and then ignored. "All" criteria evalution continues to check the following "Eq" criteria where type == 'Small' and so on. The resulting err object is the first error/exception encountered.
+During evaluation against the "All" criteria, it starts with the first "Eq" criteria where cpu == 'Intel'. Since the car object, acura_small, doesn't have such property, missing 'cpu' KeyError is raised and then ignored. "All" criteria evalution continues to check the following "Eq" criteria where type == 'Small' and so on. The resulting err object, if any, is the first error/exception encountered.
 
 
 
