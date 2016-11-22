@@ -12,9 +12,9 @@ The utility is designed to capture bool expressions as criteria objects and perf
 |  Ford  |  Compact |  12.2     |  22       |   27        |  None     |   Front      |
 +--------+----------+-----------+-----------+-------------+-----------+--------------+
 
-
+=========================================
 To define a search criteria where "make" is "Acura", "type" is "Small" and "drivetrain" is "Front", there are 3 options,
-
+=========================================
 option 1, type the string expression and convert it to a criteria object:
 .. code-block:: bash
     $ search_criteria = to_criteria( "make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )
