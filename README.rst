@@ -12,6 +12,7 @@ The utility is designed to capture bool expressions as criteria objects and perf
 |  Ford  |  Compact |  12.2     |  22       |   27        |  None     |   Front      |
 +--------+----------+-----------+-----------+-------------+-----------+--------------+
 
+
 To define a search criteria where "make" is "Acura", "type" is "Small" and "drivetrain" is "Front", there are 3 options,
 
 option 1, type the string expression and convert it to a criteria object:
@@ -25,6 +26,7 @@ option 2, specify a criteria in polish notation, sort of:
 option 3, or just compose the criteria object:
 .. code-block:: bash
     $ search_criteria = All(Eq("make", "Acura"), Eq("type", "Small"), Eq("drivetrain", "Front"))
+
 
 To evaluate the criteria, there are also a few options,
 
