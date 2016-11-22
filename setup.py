@@ -15,7 +15,7 @@ setup(
 
     version='1.0.1',
 
-    description='boolean expression evaluator and criteria',
+    description='boolean expression evaluator',
 
     long_description=long_description,
 
@@ -32,7 +32,7 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
 
-    keywords='boolean expression evaluator criteria util',
+    keywords='boolean expression evaluator util',
 
     author='hyw208',
 
