@@ -13,20 +13,20 @@ The utility is designed to capture bool expressions as criteria objects and perf
 +--------+----------+-----------+-----------+-------------+-----------+--------------+
 
 ===========================
-To define a search criteria
+Criteria/Expression
 ===========================
-where "make" is "Acura", "type" is "Small" and "drivetrain" is "Front", there are 3 options,
+To define a search criteria where "make" is "Acura", "type" is "Small" and "drivetrain" is "Front", there are 3 options,
 
 option 1, type the string expression and convert it to a criteria object:
-.. code-block:: bash
+.. code-block:: python
     $ search_criteria = to_criteria( "make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )
 
 option 2, specify a criteria in polish notation, sort of:
-.. code-block:: bash
+.. code-block:: python
     $ search_criteria = Criteria().Eq("make", "Acura").Eq("type", "Small").Eq("drivetrain", "Front").All().Done()
 
 option 3, or just compose the criteria object:
-.. code-block:: bash
+.. code-block:: python
     $ search_criteria = All(Eq("make", "Acura"), Eq("type", "Small"), Eq("drivetrain", "Front"))
 
 
