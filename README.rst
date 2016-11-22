@@ -83,7 +83,7 @@ When dealing with a bag of objects with inconsistent api or various data quality
     >>> search_criteria(acura_small, fuzzy=True)
     (True, KeyError('cannot find item cpu'))
 
-During evaluation against the "All" criteria, it starts with the first "Eq" criteria where cpu == 'Intel'. Since the car object, acura_small, doesn't have such property, missing 'cpu' KeyError is raised and then ignored. "All" criteria evalution continues to check the following "Eq" criteria where type == 'Small' and so on. The resulting err object, if any, is the first error/exception encountered.
+During evaluation against the "All" criteria, evaluator starts with the first "Eq" criteria where cpu == 'Intel'. For the car object, acura_small, it doesn't have a 'cpu' property, therefore a KeyError is raised and captured. "All" criteria evaluator then continues to check the next "Eq" criteria where type == 'Small' and so on. The resulting err object, if any, is the very first error/exception encountered.
 
 
 
