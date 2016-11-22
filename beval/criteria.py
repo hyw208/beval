@@ -40,9 +40,9 @@ def assert_outcomes_d_w_a(std_types, fuzzy_types):
     """ remove this decorator after fully tested with use cases """
     def assert_outcomes_d(func):
 
-        def decorated(criteria, ctx):
-            outcomes = fuzzy_types if hasattr(ctx, 'fuzzy') and ctx.fuzzy else std_types
-            (ans, err) = func(criteria, ctx)
+        def decorated(criteria, ctx, fuzzy=False):
+            outcomes = fuzzy_types if (hasattr(ctx, 'fuzzy') and ctx.fuzzy) or fuzzy else std_types
+            (ans, err) = func(criteria, ctx, fuzzy)
 
             if ans not in outcomes:
                 raise AssertionError("unexpected outcome type '%s' for criteria '%s'" % (type(ans), type(criteria)))

@@ -65,6 +65,24 @@ class TestCriteria(TestCase):
             self.assertTrue(ans)
             self.assertIsInstance(err, KeyError)
 
+    def test_criteria_call(self):
+        car_search_criteria = to_criteria("cpu == 'Intel' and make == 'Acura' and type == 'Midsize' and drivetrain == 'Front'")
+        (ans, err) = car_search_criteria(acura)
+        self.assertEqual(ans, Criteria.ERROR)
+        self.assertIsInstance(err, KeyError)
+
+        (ans, err) = car_search_criteria(Ctx(acura))
+        self.assertEqual(ans, Criteria.ERROR)
+        self.assertIsInstance(err, KeyError)
+
+        (ans, err) = car_search_criteria(acura, True)
+        self.assertTrue(ans)
+        self.assertIsInstance(err, KeyError)
+
+        (ans, err) = car_search_criteria(Ctx(acura, True))
+        self.assertTrue(ans)
+        self.assertIsInstance(err, KeyError)
+
     def test_filter_cars(self):
         """ create criteria either through api or text """
         expected = "((17 <= maxprice < 21 and make == 'Chevrolet') and type == 'Compact')"
