@@ -1,7 +1,7 @@
 ########################################
 boolean expression evaluator
 ########################################
-The utility is designed to capture bool expressions as criteria objects and perform evaluations over one to many in-memory objects. For example, given an instance or a list of Car objects, see tests.test_helper for a list of car objects:
+The utility is designed to capture bool expressions as criteria objects and perform evaluations against one to many in-memory objects. For example, given an instance or a list of objects of type Car or dict or basically any type containing the info below. See tests.test_helper for a list of car objects.
 
 +--------+----------+-----------+-----------+-------------+-----------+--------------+
 |  make  |  type    |  maxprice |  mpgcity  |   mpghiway  |  airbags  |   drivetrain |
@@ -13,38 +13,38 @@ The utility is designed to capture bool expressions as criteria objects and perf
 
 
 ===========================
-criteria creation
+to define a criteria
 ===========================
 To define a search criteria where "make" is "Acura", "type" is "Small" and "drivetrain" is "Front", there are 3 options,
 
-option 1, type the string expression and convert it to a criteria object
+option 1, type the string boolean expression and convert it to a criteria object
 
     >>> search_criteria = to_criteria( "make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )
 
-option 2, specify a criteria in polish notation, sort of
+option 2, create a criteria in polish notation, sort of
 
     >>> search_criteria = Criteria().Eq("make", "Acura").Eq("type", "Small").Eq("drivetrain", "Front").All().Done()
 
-option 3, or just compose the criteria object
+option 3, or simply compose the criteria object
 
     >>> search_criteria = All(Eq("make", "Acura"), Eq("type", "Small"), Eq("drivetrain", "Front"))
 
 
 ===========================
-criteria evaluation against an object
+to eval a criteria against an object
 ===========================
-To evaluate the criteria, there are also a few options,
+To evaluate the search criteria, there are also a few options available,
 
-option 1, invoke __call__ method with an underlying object or a ctx object
+option 1, invoke the __call__ method with an underlying object or a ctx object wrapping around the underlying
 
     >>> (ans, err) = search_criteria(acura_small)
     >>> (ans, err) = search_criteria(Ctx(acura_small, False))
 
-option 2, invoke eval method, with a ctx object
+option 2, call the eval method, with a ctx object
 
     >>> (ans, err) = search_criteria.eval(Ctx(acura_small, fuzzy=False))
 
-option 3, change return type and behavior
+option 3, define a simple function to change the return type and behavior
 
     >>> def true_or_false(criteria, obj):
     >>>      (ans, err) = criteria(obj)
@@ -57,22 +57,25 @@ option 3, change return type and behavior
 
 
 ===========================
-criteria representations
+transform the representation of a criteria between text and object
 ===========================
-Criteria objects can be serialized to string representations and back to objects,
+A criteria object can be serialized to a string and de-serialized back to an object,
 
-    >>> bool_expr = "make == 'Acura' and type == 'Small' and drivetrain == 'Front'"
-    >>> search_criteria = to_criteria(bool_expr)
-    >>> bool_expr = str(search_criteria)
+    >>> expr = "make == 'Acura' and type == 'Small' and drivetrain == 'Front'"
+    >>> criteria = to_criteria(expr)
+    >>> expr = str(criteria)
 
 
 ===========================
-criteria behavior and control flag
+to change the evaluation behavior of a criteria
 ===========================
-When dealing with objects with inconsistent api or data quality issues, the fuzzy search option can be turned on. Fuzzy search will continue to evaluate the next criteria despite error accessing non-existent property or field, and it will ignore any exception thrown during comparison. For instance, given a modified search criteria below:
+When dealing with a bag of objects with inconsistent api or data quality, the fuzzy search option can be turned on. When the flag is turned on, evaluator continues to evaluate the next criteria despite error accessing non-existent property or exception thrown during comparison. For instance, given an expression with an non-existent property 'cpu':
 
     >>> search_criteria = to_criteria( "cpu == 'Intel' and make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )
     >>> (ans, err) = search_criteria(acura_small, fuzzy=True)
+    >>> ans
+    True
+    >>>
 
 During evaluation against the "All" criteria, it starts with the first "Eq" criteria where cpu == 'Intel'. Since the car object, acura_small, doesn't have such property, missing 'cpu' KeyError is raised and then ignored. "All" criteria evalution continues to check the following "Eq" criteria where type == 'Small' and so on. The resulting err object, if any, is the first error/exception encountered.
 
