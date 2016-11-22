@@ -31,7 +31,7 @@ option 3, or just compose the criteria object
 
 
 ===========================
-criteria evaluation against objects
+criteria evaluation against an object
 ===========================
 To evaluate the criteria, there are also a few options,
 
@@ -67,7 +67,7 @@ Criteria objects can be serialized to string representations and back to objects
 
 
 ===========================
-criteria control flag and behavior
+criteria behavior and control flag
 ===========================
 When dealing with objects with inconsistent api or data quality issues, the fuzzy search option can be turned on. Fuzzy search will continue to evaluate the next criteria despite error accessing non-existent property or field, and it will ignore any exception thrown during comparison. For instance, given a modified search criteria below:
 
