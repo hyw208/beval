@@ -93,5 +93,67 @@ When dealing with a bag of objects with inconsistent api or various data quality
 During evaluation of the "All" criteria, evaluator starts with the 1st "Eq" criteria where cpu == 'Intel'. For the car object, acura_small, it doesn't have a 'cpu' property, therefore a KeyError is raised and captured. "All" criteria evaluator then continues to check the next "Eq" criteria where type == 'Small' and so on. The resulting err object, if any, is the very first error/exception encountered.
 
 
+===========================
+To filter a list of objects
+===========================
+To use built-in filter, create a predicate function that returns True or False
+
+    >>> cars = [{"make": "Subaru", "drivetrain": "All"}, {"make": "Acura", "drivetrain": "Front"}, {"make": "Ford", "drivetrain": "Front"}]
+    >>> search_criteria = to_criteria( "make == 'Acura' and drivetrain == 'Front'" )
+    >>> def predicate(obj):
+            (ans, err) = search_criteria(obj)
+            if ans in (Criteria.UNKNOWN, Criteria.ERROR,):
+                raise err
+            else:
+                return ans
+    >>> matched = filter(predicate, cars)
+    >>> len(matched)
+    1
+    >>> matched[0]
+    {'drivetrain': 'Front', 'make': 'Acura'}
+
+Or create a generic predicate function and use functools.partial to bind arguments,
+
+    >>> from functools import partial
+    >>> def predicate(criteria, fuzzy, obj):
+            (ans, err) = criteria(obj, fuzzy)
+            if ans in (Criteria.UNKNOWN, Criteria.ERROR,):
+                raise err
+            else:
+                return ans
+    >>> predicate2 = partial(predicate, search_criteria, False)
+    >>> matched = filter(predicate2, cars)
+    >>> len(matched)
+    1
+    >>> matched[0]
+    {'drivetrain': 'Front', 'make': 'Acura'}
+
+
+===========================
+More about Ctx
+===========================
+TBA
+
+
+===========================
+List of available criteria classes
+===========================
+Bool
+Eq
+NotEq
+Between
+Gt
+GtE
+Lt
+LtE
+In
+NotIn
+And
+All
+Or
+Any
+Not
+
+
 
 
