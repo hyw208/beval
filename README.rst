@@ -138,21 +138,21 @@ TBA
 ===========================
 List of available criteria classes
 ===========================
-Bool
-Eq
-NotEq
-Between
-Gt
-GtE
-Lt
-LtE
-In
-NotIn
-And
-All
-Or
-Any
-Not
+* Bool
+* Eq
+* NotEq
+* Between
+* Gt
+* GtE
+* Lt
+* LtE
+* In
+* NotIn
+* And
+* All
+* Or
+* Any
+* Not
 
 
 
