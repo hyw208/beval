@@ -13,8 +13,32 @@ The utility is designed to capture bool expressions as criteria objects and perf
 |  Subaru |  Compact |  22.7     |  23       |   30        |  Driver   |  All         |
 +---------+----------+-----------+-----------+-------------+-----------+--------------+
 
+
 ===========================
-To define a criteria
+To define a simple criteria
+===========================
+To define an "Eq" criteria and evaluate against a car object of type dict. Object to be evaluated can be of any type as long as it has the property or method.
+
+    >>> subaru = {"make": "Subaru", "type": "Compact", "mpgcity": 30} <-- define a simple car of type dict
+    >>> acura = {"make": "Acura", "type": "Small", "mpgcity": 25}
+    >>> from beval.criteria import Eq
+    >>> eq = Eq("make", "Subaru")
+    >>> eq(subaru)
+    (True, None)
+    >>> eq(acura)
+    (False, None)
+
+To define a "Between" criteria,
+
+    >>> from beval.criteria import Between
+    >>> btw = Between(28, "mpgcity", 32)
+    >>> btw(subaru)
+    (True, None)
+    >>> btw(acura)
+    (False, None)
+
+===========================
+More on defining a criteria
 ===========================
 To define a search criteria for cars where "make" is "Acura", "type" is "Small" and "drivetrain" is "Front", there are 3 options,
 
@@ -32,7 +56,7 @@ option 3, or simply compose a criteria object
 
 
 ===========================
-To evaluate a criteria against an object
+More on evaluating against an object
 ===========================
 To evaluate a search criteria, there are also a few options available,
 
@@ -96,10 +120,18 @@ During evaluation of the "All" criteria, evaluator starts with the 1st "Eq" crit
 ===========================
 To filter a list of objects
 ===========================
-To use built-in filter, create a predicate function that returns True or False
+A simple way with list comprehension,
 
     >>> cars = [{"make": "Subaru", "drivetrain": "All"}, {"make": "Acura", "drivetrain": "Front"}, {"make": "Ford", "drivetrain": "Front"}]
     >>> search_criteria = to_criteria( "make == 'Acura' and drivetrain == 'Front'" )
+    >>> matched = [car for car in cars if True in search_criteria(car)]
+    >>> len(matched)
+    1
+    >>> matched[0]
+    {'drivetrain': 'Front', 'make': 'Acura'}
+
+Or use the built-in filter, create a predicate function that returns True or False,
+
     >>> def predicate(obj):
             (ans, err) = search_criteria(obj)
             if ans in (Criteria.UNKNOWN, Criteria.ERROR,):
@@ -130,7 +162,7 @@ Or create a generic predicate function and use functools.partial to bind argumen
 
 
 ===========================
-More about Ctx
+A bit of info on Ctx
 ===========================
 TBA
 

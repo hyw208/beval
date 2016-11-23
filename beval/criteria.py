@@ -55,14 +55,60 @@ def assert_outcomes_d_w_a(std_types, fuzzy_types):
     return assert_outcomes_d
 
 
+class AbstractCtx(object):
+
+    def __getitem__(self, key):
+        (obj, err) = safe_monad(self.key, key)
+        if err is None:
+            return obj
+
+        if isinstance(key, bool) or isinstance(key, numbers.Number):
+            return key
+
+        (obj, err) = safe_monad(ast.literal_eval, key)
+        if err is None:
+            return obj
+
+        raise KeyError('cannot find item %s' % key)
+
+    def key(self, key):
+        raise NotImplementedError
+
+
+class Ctx(AbstractCtx):
+
+    @property
+    def one(self):
+        return self._one
+
+    @property
+    def fuzzy(self):
+        return self._fuzzy
+
+    def __init__(self, one, fuzzy=False):
+        self._one = one
+        self._fuzzy = fuzzy
+
+    def key(self, key):
+        if hasattr(self._one, "__getitem__") and key in self._one:
+            return self._one[key]
+
+        elif isinstance(key, str) and hasattr(self._one, key):
+            obj = getattr(self._one, key)
+            return obj() if callable(obj) else obj
+
+        else:
+            raise KeyError("cannot find item %s" % key)
+
+
 class Criteria(object):
 
     UNKNOWN = '__UNKNOWN__'
     ERROR = '__ERROR__'
 
     @assert_outcomes_d_w_a([True, False, ERROR], [True, False, UNKNOWN])
-    def __call__(self, obj, fuzzy=False):
-        ctx = obj if isinstance(obj, Ctx) else Ctx(obj, fuzzy)
+    def __call__(self, obj, fuzzy=False, cls=Ctx):
+        ctx = obj if isinstance(obj, cls) else cls(obj, fuzzy)
         return self.eval(ctx)
 
     def eval(self, ctx):
@@ -165,52 +211,6 @@ class Criteria(object):
             raise SyntaxError('more items on stack still, %s' % self.size())
 
         return self._stack.pop()
-
-
-class AbstractCtx(object):
-
-    def __getitem__(self, key):
-        (obj, err) = safe_monad(self.key, key)
-        if err is None:
-            return obj
-
-        if isinstance(key, bool) or isinstance(key, numbers.Number):
-            return key
-
-        (obj, err) = safe_monad(ast.literal_eval, key)
-        if err is None:
-            return obj
-
-        raise KeyError('cannot find item %s' % key)
-
-    def key(self, key):
-        raise NotImplementedError
-
-
-class Ctx(AbstractCtx):
-
-    @property
-    def one(self):
-        return self._one
-
-    @property
-    def fuzzy(self):
-        return self._fuzzy
-
-    def __init__(self, one, fuzzy=False):
-        self._one = one
-        self._fuzzy = fuzzy
-
-    def key(self, key):
-        if hasattr(self._one, "__getitem__") and key in self._one:
-            return self._one[key]
-
-        elif isinstance(key, str) and hasattr(self._one, key):
-            obj = getattr(self._one, key)
-            return obj() if callable(obj) else obj
-
-        else:
-            raise KeyError("cannot find item %s" % key)
 
 
 class Bool(Criteria):
