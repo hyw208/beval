@@ -58,6 +58,15 @@ class TestEq(TestCase):
         text = str(all_)
         self.assertEqual(text, "make == 'Acura' and price == 18.8 and american == True")
 
+    def test_none(self):
+        eq = Eq("make", None)
+        expected = "make == None"
+        self.assertEqual(expected, str(eq))
+
+        eq2 = to_criteria(expected)
+        self.assertEqual(eq2.key, "make")
+        self.assertIsNone(eq2.right)
+
 
 class TestNotEq(TestCase):
 

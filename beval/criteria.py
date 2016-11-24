@@ -695,6 +695,9 @@ def visit(node, data):
         elif node.id == 'False':
             id = False
 
+        elif node.id == 'None':
+            id = None
+
         else:
             id = node.id
 
