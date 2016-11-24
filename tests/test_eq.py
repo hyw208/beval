@@ -22,6 +22,18 @@ class TestEq(TestCase):
             self.assertFalse(ans)
             self.assertIsNone(err)
 
+    def test_none(self):
+        eq = Eq("make", None)
+        expected = "make == None"
+        self.assertEqual(expected, str(eq))
+
+        eq2 = to_criteria(expected)
+        self.assertEqual(eq2.key, "make")
+        self.assertIsNone(eq2.right)
+
+        car = {"make": None}
+        (ans, err) = eq(car)
+
     def test_eq_missing_attribute(self):
         with acura_small as acura:
             eq = Eq("cpu", "Intel")
@@ -57,15 +69,6 @@ class TestEq(TestCase):
         all_ = All(Eq("make", "Acura"), Eq("price", 18.8), Eq("american", True))
         text = str(all_)
         self.assertEqual(text, "make == 'Acura' and price == 18.8 and american == True")
-
-    def test_none(self):
-        eq = Eq("make", None)
-        expected = "make == None"
-        self.assertEqual(expected, str(eq))
-
-        eq2 = to_criteria(expected)
-        self.assertEqual(eq2.key, "make")
-        self.assertIsNone(eq2.right)
 
 
 class TestNotEq(TestCase):
