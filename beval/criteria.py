@@ -111,6 +111,9 @@ class Criteria(object):
         ctx = obj if isinstance(obj, Ctx) else CRITERIA_CLS_MAP["Ctx"](obj, fuzzy)
         return self.eval(ctx)
 
+    def compare(self, op, left, right, ctx):
+        return safe(self.fuzzy(ctx), op, left, right)
+
     def eval(self, ctx):
         raise NotImplementedError
 
@@ -268,7 +271,7 @@ class Eq(Criteria):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
-            (obj_, err_) = safe(self.fuzzy(ctx), self._op, obj, self._right)
+            (obj_, err_) = self.compare(self._op, obj, self._right, ctx)
             return obj_, err_
 
         else:
@@ -341,10 +344,10 @@ class Between(Criteria):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
-            (obj_, err_) = safe(self.fuzzy(ctx), self._lower_op, self._lower, obj)
+            (obj_, err_) = self.compare(self._lower_op, self._lower, obj, ctx)
 
             if obj_ in (True, ):
-                (obj2_, err2_) = safe(self.fuzzy(ctx), self._upper_op, obj, self._upper)
+                (obj2_, err2_) = self.compare(self._upper_op, obj, self._upper, ctx)
                 return obj2_, err2_
 
             else:
@@ -361,6 +364,9 @@ class In(Eq):
     def __init__(self, key, *right):
         super(In, self).__init__(key, right)
 
+    def compare(self, op, left, right, ctx):
+        return safe_monad(op, left, right)
+
     def eval(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
 
@@ -369,8 +375,7 @@ class In(Eq):
             first_error = None
 
             for one in self.right:
-                (obj_, err_) = safe_monad(self._op, obj, one)
-
+                (obj_, err_) = self.compare(self._op, obj, one, ctx)
                 if obj_ in (True,):
                     return obj_, first_error or err_
 
