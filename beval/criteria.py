@@ -108,8 +108,7 @@ class Criteria(object):
 
     @assert_outcomes_d_w_a([True, False, ERROR], [True, False, UNKNOWN])
     def __call__(self, obj, fuzzy=False):
-        cls = CRITERIA_CLS_MAP["Ctx"]
-        ctx = obj if isinstance(obj, Ctx) else cls(obj, fuzzy)
+        ctx = obj if isinstance(obj, Ctx) else CRITERIA_CLS_MAP["Ctx"](obj, fuzzy)
         return self.eval(ctx)
 
     def eval(self, ctx):
