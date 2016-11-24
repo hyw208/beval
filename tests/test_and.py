@@ -1,8 +1,11 @@
 import unittest
 from unittest import TestCase
-
-from beval.criteria import Criteria, Eq, NotEq, And, All, cTrue, cFalse, Ctx
+from beval.criteria import Criteria, Eq, NotEq, And, All, Ctx, CRITERIA_CLS_MAP
 from test_helper import acura_small as acura, CompareError
+
+
+cTrue = CRITERIA_CLS_MAP["Bool"](True)
+cFalse = CRITERIA_CLS_MAP["Bool"](False)
 
 
 class TestAnd(TestCase):

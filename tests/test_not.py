@@ -1,8 +1,11 @@
 import unittest
 from unittest import TestCase
-
-from beval.criteria import Ctx, to_criteria, cTrue, cFalse, Not, And, Eq
+from beval.criteria import Ctx, to_criteria, Not, And, Eq, CRITERIA_CLS_MAP
 from test_helper import acura_small
+
+
+cTrue = CRITERIA_CLS_MAP["Bool"](True)
+cFalse = CRITERIA_CLS_MAP["Bool"](False)
 
 
 class TestNot(TestCase):

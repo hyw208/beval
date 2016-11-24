@@ -1,7 +1,6 @@
 import unittest
 from unittest import TestCase
-
-from beval.criteria import Criteria, Ctx, to_criteria, And
+from beval.criteria import Criteria, Ctx, to_criteria, And, Eq, CRITERIA_CLS_MAP
 from test_helper import acura_midsize as acura, chevrolet_compact_e, chevrolet_compact_c, CARS
 
 
@@ -120,6 +119,30 @@ class TestCriteria(TestCase):
 
         potential = filter(predicate, CARS)
         self.assertEqual(len(potential), 2)
+
+    def test_criteria_cls_map(self):
+        """ back up the original ctx impl cls """
+        ctx_cls = CRITERIA_CLS_MAP["Ctx"]
+
+        eq = Eq("make", "Subaru")
+        (ans, err) = eq({"make": "Subaru"})
+        self.assertTrue(ans)
+        self.assertIsNone(err)
+
+        class Ctx2(Ctx):
+            def key(self, key):
+                raise KeyError("no key %s" % key)
+
+        """ override ctx impl cls temporarily """
+        CRITERIA_CLS_MAP["Ctx"] = Ctx2
+
+        eq = Eq("make", "Subaru")
+        (ans, err) = eq({"make": "Subaru"})
+        self.assertEqual(ans, Criteria.ERROR)
+        self.assertIsInstance(err, KeyError)
+
+        """ restore the original ctx impl cls """
+        CRITERIA_CLS_MAP["Ctx"] = ctx_cls
 
 
 if __name__ == '__main__':

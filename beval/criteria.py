@@ -107,8 +107,9 @@ class Criteria(object):
     ERROR = '__ERROR__'
 
     @assert_outcomes_d_w_a([True, False, ERROR], [True, False, UNKNOWN])
-    def __call__(self, obj, fuzzy=False, cls=Ctx):
-        ctx = obj if isinstance(obj, cls) else cls(obj, fuzzy)
+    def __call__(self, obj, fuzzy=False):
+        cls = CRITERIA_CLS_MAP["Ctx"]
+        ctx = obj if isinstance(obj, Ctx) else cls(obj, fuzzy)
         return self.eval(ctx)
 
     def eval(self, ctx):
@@ -130,79 +131,79 @@ class Criteria(object):
         return self._stack.pop()
 
     def Bool(self, key):
-        c = Bool(key)
+        c = CRITERIA_CLS_MAP["Bool"](key)
         self._push(c)
         return self
 
     def Eq(self, key, right):
-        c = Eq(key, right)
+        c = CRITERIA_CLS_MAP["Eq"](key, right)
         self._push(c)
         return self
 
     def NotEq(self, key, right):
-        c = NotEq(key, right)
+        c = CRITERIA_CLS_MAP["NotEq"](key, right)
         self._push(c)
         return self
 
     def LtE(self, key, right):
-        c = LtE(key, right)
+        c = CRITERIA_CLS_MAP["LtE"](key, right)
         self._push(c)
         return self
 
     def Lt(self, key, right):
-        c = Lt(key, right)
+        c = CRITERIA_CLS_MAP["Lt"](key, right)
         self._push(c)
         return self
 
     def GtE(self, key, right):
-        c = GtE(key, right)
+        c = CRITERIA_CLS_MAP["GtE"](key, right)
         self._push(c)
         return self
 
     def Gt(self, key, right):
-        c = Gt(key, right)
+        c = CRITERIA_CLS_MAP["Gt"](key, right)
         self._push(c)
         return self
 
     def Between(self, lower, key, upper, lower_op=operator.le, upper_op=operator.lt):
-        c = Between(lower, key, upper, lower_op, upper_op)
+        c = CRITERIA_CLS_MAP["Between"](lower, key, upper, lower_op, upper_op)
         self._push(c)
         return self
 
     def In(self, key, *right):
-        c = In(key, *right)
+        c = CRITERIA_CLS_MAP["In"](key, *right)
         self._push(c)
         return self
 
     def NotIn(self, key, *right):
-        c = NotIn(key, *right)
+        c = CRITERIA_CLS_MAP["NotIn"](key, *right)
         self._push(c)
         return self
 
     def And(self):
         (r, l) = (self._pop(), self._pop())
-        c = And(l, r)
+        c = CRITERIA_CLS_MAP["And"](l, r)
         self._push(c)
         return self
 
     def Or(self):
         (r, l) = (self._pop(), self._pop())
-        c = Or(l, r)
+        c = CRITERIA_CLS_MAP["Or"](l, r)
         self._push(c)
         return self
 
     def All(self):
-        c = All(*self._stack)
+        c = CRITERIA_CLS_MAP["All"](*self._stack)
         self._stack = [c]
         return self
 
     def Any(self):
-        c = Any(*self._stack)
+        c = CRITERIA_CLS_MAP["Any"](*self._stack)
         self._stack = [c]
         return self
 
     def Not(self):
-        c = Not(self._pop())
+        c = CRITERIA_CLS_MAP["Not"](self._pop())
         self._push(c)
         return self
 
@@ -243,11 +244,6 @@ class Bool(Criteria):
 
     def __str__(self):
         return "%s" % self._key
-
-
-cTrue = Bool(True)
-
-cFalse = Bool(False)
 
 
 class Eq(Criteria):
@@ -547,6 +543,16 @@ class Not(Criteria):
         return "not (%s)" % str(self._one)
 
 
+def quote(obj):
+    return ("'%s'" if isinstance(obj, str) else "%s") % obj
+
+
+def to_criteria(text):
+    data = []
+    visit(ast.parse(text, mode='eval'), data)
+    return data.pop()
+
+
 OP_TO_TEXT_MAP = {
     operator.eq: "==",
     operator.ne: "!=",
@@ -554,19 +560,6 @@ OP_TO_TEXT_MAP = {
     operator.le: "<=",
     operator.gt: ">",
     operator.ge: ">=",
-}
-
-
-AST_OP_TO_CRITERIA_MAP = {
-    ast.Eq: Eq,
-    ast.NotEq: NotEq,
-    ast.Lt: Lt,
-    ast.LtE: LtE,
-    ast.Gt: Gt,
-    ast.GtE: GtE,
-    ast.Not: Not,
-    ast.In: In,
-    ast.NotIn: NotIn,
 }
 
 
@@ -580,14 +573,37 @@ AST_OP_TO_OPERATOR_MAP = {
 }
 
 
-def quote(obj):
-    return ("'%s'" if isinstance(obj, str) else "%s") % obj
+AST_OP_TO_CRITERIA_MAP = {
+    ast.Eq: "Eq",
+    ast.NotEq: "NotEq",
+    ast.Lt: "Lt",
+    ast.LtE: "LtE",
+    ast.Gt: "Gt",
+    ast.GtE: "GtE",
+    ast.In: "In",
+    ast.NotIn: "NotIn",
+    ast.Not: "Not",
+}
 
 
-def to_criteria(text):
-    data = []
-    visit(ast.parse(text, mode='eval'), data)
-    return data.pop()
+CRITERIA_CLS_MAP = {
+    "Bool": Bool,
+    "Eq": Eq,
+    "NotEq": NotEq,
+    "Between": Between,
+    "Gt": Gt,
+    "GtE": GtE,
+    "Lt": Lt,
+    "LtE": LtE,
+    "In": In,
+    "NotIn": NotIn,
+    "And": And,
+    "All": All,
+    "Or": Or,
+    "Any": Any,
+    "Not": Not,
+    "Ctx": Ctx,
+}
 
 
 def visit(node, data):
@@ -598,7 +614,7 @@ def visit(node, data):
             raise SyntaxError("do not support multiple expression nodes, %s" % len(data))
 
         obj = data.pop()
-        data.append(obj if isinstance(obj, Criteria) else Bool(obj))
+        data.append(obj if isinstance(obj, Criteria) else CRITERIA_CLS_MAP["Bool"](obj))
         return
 
     if isinstance(node, ast.BoolOp):
@@ -607,11 +623,11 @@ def visit(node, data):
             for value in node.values:
                 visit(value, data)
                 obj = data.pop()
-                values.append(obj if isinstance(obj, Criteria) else Bool(obj))
+                values.append(obj if isinstance(obj, Criteria) else CRITERIA_CLS_MAP["Bool"](obj))
 
-            cls = (And if len(values) == 2 else All) \
+            cls = (CRITERIA_CLS_MAP["And"] if len(values) == 2 else CRITERIA_CLS_MAP["All"]) \
                         if isinstance(node.op, ast.And) else \
-                            (Or if len(values) == 2 else Any)
+                            (CRITERIA_CLS_MAP["Or"] if len(values) == 2 else CRITERIA_CLS_MAP["Any"])
 
             data.append(cls(*values))
             return
@@ -625,13 +641,13 @@ def visit(node, data):
 
         if len(node.ops) == 1:
             op = node.ops[0]
-            cls = AST_OP_TO_CRITERIA_MAP[type(op)]
+            cls = CRITERIA_CLS_MAP[AST_OP_TO_CRITERIA_MAP[type(op)]]
 
             comparator = node.comparators[0]
             visit(comparator, data)
             right = data.pop()
 
-            c = cls(left, right) if cls not in (In, NotIn, ) else cls(left, *right)
+            c = cls(left, right) if cls not in (CRITERIA_CLS_MAP["In"], CRITERIA_CLS_MAP["NotIn"], ) else cls(left, *right)
             data.append(c)
             return
 
@@ -652,7 +668,7 @@ def visit(node, data):
             visit(comparator, data)
             upper = data.pop()
 
-            between = Between( lower, one, upper, lower_op, upper_op )
+            between = CRITERIA_CLS_MAP["Between"]( lower, one, upper, lower_op, upper_op )
             data.append(between)
             return
 
@@ -663,9 +679,9 @@ def visit(node, data):
         if isinstance(node.op, ast.Not):
             visit(node.operand, data)
             obj = data.pop()
-            criteria = obj if isinstance(obj, Criteria) else Bool(obj)
+            criteria = obj if isinstance(obj, Criteria) else CRITERIA_CLS_MAP["Bool"](obj)
 
-            cls = AST_OP_TO_CRITERIA_MAP[type(node.op)]
+            cls = CRITERIA_CLS_MAP[AST_OP_TO_CRITERIA_MAP[type(node.op)]]
             data.append(cls(criteria))
             return
 
