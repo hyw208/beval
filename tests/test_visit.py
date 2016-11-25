@@ -326,10 +326,29 @@ class TestVisit(TestCase):
 
         class Group(object):
 
+            CATEGORY = "category"
+            NAMESPACE = "namespace"
+
+            DEFAULT = "default"
+            OFFICIAL = "official"
+
+            @property
+            def members(self):
+                return self._members
+
+            @property
+            def category(self):
+                return self._meta[Group.CATEGORY]
+
+            @property
+            def namespace(self):
+                return self._meta[Group.NAMESPACE]
+
             def __init__(self, *members, **meta):
                 self._members = members
                 self._meta = meta
-                self._meta["category"] = meta["category"] if "category" in meta else "default"
+                self._meta[Group.CATEGORY] = meta[Group.CATEGORY] if Group.CATEGORY in meta else Group.DEFAULT
+                self._meta[Group.NAMESPACE] = meta[Group.NAMESPACE] if Group.NAMESPACE in meta else Group.OFFICIAL
 
             def __str__(self):
                 args = ",".join(quote(member) for member in self._members)
@@ -337,6 +356,7 @@ class TestVisit(TestCase):
                 return "group(%s,%s)" % (args, kwargs)
 
             def values(self, ctx, key):
+                """ just temp work to show the intention, values and groups should come from providers """
                 many = list()
                 for member in self._members:
                     if member == "domestic":
@@ -397,6 +417,12 @@ class TestVisit(TestCase):
         self.assertIsNone(err)
         self.assertEqual(expected, str(not_in_))
 
+        expected = "group('foreign',category='default',namespace='official')"
+        for group in (Group("foreign",category="default",namespace="official"), Group("foreign"),):
+            self.assertEqual(group.members, ("foreign",))
+            self.assertEqual(group.category, "default")
+            self.assertEqual(group.namespace, "official")
+            self.assertEqual(expected, str(group))
 
 if __name__ == '__main__':
     unittest.main()
