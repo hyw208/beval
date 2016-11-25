@@ -775,13 +775,8 @@ def visit(node, data):
                 values.append(data.pop())
             kwargs = {k: v for k, v in zip(keys, values)}
 
-        merged = {}
-        if len(keywords) > 0:
-            merged.update(keywords)
-        if len(kwargs) > 0:
-            merged.update(kwargs)
-
-        data.append(func(*args, **merged))
+        keywords.update(kwargs)
+        data.append(func(*args, **keywords))
         return
 
 
