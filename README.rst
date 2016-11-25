@@ -21,7 +21,7 @@ To define an "Eq" criteria and evaluate against a car object of type dict. Objec
 
     >>> subaru = {"make": "Subaru", "type": "Compact", "mpgcity": 30} <-- define a simple car of type dict
     >>> acura = {"make": "Acura", "type": "Small", "mpgcity": 25}
-    >>> from beval.criteria import Eq
+    >>> from beval.criteria import Eq, Between
     >>> eq = Eq("make", "Subaru")
     >>> eq(subaru)
     (True, None)
@@ -30,7 +30,6 @@ To define an "Eq" criteria and evaluate against a car object of type dict. Objec
 
 To define a "Between" criteria,
 
-    >>> from beval.criteria import Between
     >>> btw = Between(28, "mpgcity", 32)
     >>> btw(subaru)
     (True, None)
@@ -44,6 +43,7 @@ To define a search criteria for cars where "make" is "Acura", "type" is "Small" 
 
 option 1, type a string boolean expression and convert it to a criteria object
 
+    >>> from beval.criteria import Const, Criteria, to_criteria, Eq, All
     >>> search_criteria = to_criteria( "make == 'Acura' and type == 'Small' and drivetrain == 'Front'" )
 
 option 2, create a criteria in polish notation, sort of
@@ -76,7 +76,7 @@ option 3, define a simple function in order to change the return type and behavi
 
     >>> def evaluate(criteria, obj, fuzzy=False):
             (ans, err) = criteria(obj, fuzzy)
-            if ans in (Criteria.UNKNOWN, Criteria.ERROR,):
+            if ans in (Const.UNKNOWN, Const.ERROR,):
                 raise err
             else:
                 return ans
@@ -134,7 +134,7 @@ Or use the built-in filter, create a predicate function that returns True or Fal
 
     >>> def predicate(obj):
             (ans, err) = search_criteria(obj)
-            if ans in (Criteria.UNKNOWN, Criteria.ERROR,):
+            if ans in (Const.UNKNOWN, Const.ERROR,):
                 raise err
             else:
                 return ans
@@ -149,7 +149,7 @@ Or create a generic predicate function and use functools.partial to bind argumen
     >>> from functools import partial
     >>> def predicate(criteria, fuzzy, obj):
             (ans, err) = criteria(obj, fuzzy)
-            if ans in (Criteria.UNKNOWN, Criteria.ERROR,):
+            if ans in (Const.UNKNOWN, Const.ERROR,):
                 raise err
             else:
                 return ans
