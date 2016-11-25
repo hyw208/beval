@@ -2,7 +2,7 @@ import operator
 import unittest
 from unittest import TestCase
 
-from beval.criteria import Criteria, Ctx, Between, to_criteria
+from beval.criteria import Criteria, Const, Ctx, Between, to_criteria
 from test_helper import acura_small
 
 
@@ -33,7 +33,7 @@ class TestBetween(TestCase):
             self.assertIsNone(err)
 
     def test_missing_info(self):
-        for ctx, expected in [(Ctx({}, False), Criteria.ERROR), (Ctx({}, True), Criteria.UNKNOWN)]:
+        for ctx, expected in [(Ctx({}, False), Const.ERROR), (Ctx({}, True), Const.UNKNOWN)]:
             btw_ = Between(10, "price", 20)
             (ans, err) = btw_(ctx)
             self.assertEqual(ans, expected)

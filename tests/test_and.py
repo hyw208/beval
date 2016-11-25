@@ -1,11 +1,7 @@
 import unittest
 from unittest import TestCase
-from beval.criteria import Criteria, Eq, NotEq, And, All, Ctx, CRITERIA_CLS_MAP
+from beval.criteria import Criteria, Const, Eq, NotEq, And, All, Ctx, cTrue, cFalse
 from test_helper import acura_small as acura, CompareError
-
-
-cTrue = CRITERIA_CLS_MAP["Bool"](True)
-cFalse = CRITERIA_CLS_MAP["Bool"](False)
 
 
 class TestAnd(TestCase):
@@ -87,13 +83,13 @@ class TestAnd(TestCase):
             (obj, err) = and_(ctx)
             self.assertTrue(obj)
             self.assertIsNotNone(err)
-            self.assertEqual(err.message, "cannot find item make")
+            self.assertEqual(err.message, "cannot find key 'make'")
 
             and_ = Criteria().Eq("source", "nonUSA").Eq("make", "Acura").Eq("type", "Small").And().And().Done()
             (obj, err) = and_(ctx)
             self.assertTrue(obj)
             self.assertIsNotNone(err)
-            self.assertEqual(err.message, "cannot find item source")
+            self.assertEqual(err.message, "cannot find key 'source'")
 
     def test_and_left_cmp_error(self):
         with acura:
@@ -104,18 +100,18 @@ class TestAnd(TestCase):
             source = ctx["source"]
 
             (obj, err) = Eq("make", "xxx")(ctx)
-            self.assertEqual(obj, Criteria.UNKNOWN)
+            self.assertEqual(obj, Const.UNKNOWN)
             self.assertIsInstance(err, Exception)
             self.assertEqual(err.message, "left first")
 
             (obj, err) = Eq("source", "xxx")(ctx)
-            self.assertEqual(obj, Criteria.UNKNOWN)
+            self.assertEqual(obj, Const.UNKNOWN)
             self.assertIsInstance(err, KeyError)
             self.assertEqual(err.message, "right first")
 
             and_ = Criteria().Eq("make", "xxx").Eq("source", "yyy").And().Done()
             (obj, err) = and_(ctx)
-            self.assertEqual(obj, Criteria.UNKNOWN)
+            self.assertEqual(obj, Const.UNKNOWN)
             self.assertIsInstance(err, Exception)
             self.assertEqual(err.message, "left first")
 
@@ -134,7 +130,7 @@ class TestAnd(TestCase):
             ctx = Ctx(acura, False)
             and_ = And(cTrue, Eq("source", "xxx"))
             (obj, err) = and_(ctx)
-            self.assertEqual(obj, Criteria.ERROR)
+            self.assertEqual(obj, Const.ERROR)
             self.assertIsInstance(err, KeyError)
             self.assertEqual(err.message, "right first")
 

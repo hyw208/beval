@@ -1,6 +1,5 @@
 import unittest
 from unittest import TestCase
-
 from beval.criteria import Ctx, LtE
 from test_helper import acura_small
 

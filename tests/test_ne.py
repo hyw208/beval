@@ -2,7 +2,7 @@ import operator
 import unittest
 from unittest import TestCase
 
-from beval.criteria import Criteria, NotEq, to_criteria, Ctx
+from beval.criteria import Criteria, Const, NotEq, to_criteria, Ctx
 from test_helper import acura_small
 
 
@@ -23,12 +23,12 @@ class TestNe(TestCase):
 
             c = NotEq("cpu", "Intel")
             (ans, err) = c(Ctx(acura))
-            self.assertEqual(ans, Criteria.ERROR)
+            self.assertEqual(ans, Const.ERROR)
             self.assertIsInstance(err, KeyError)
 
             c = NotEq("cpu", "Intel")
             (ans, err) = c(Ctx(acura, True))
-            self.assertEqual(ans, Criteria.UNKNOWN)
+            self.assertEqual(ans, Const.UNKNOWN)
             self.assertIsInstance(err, KeyError)
 
     def test_ser(self):

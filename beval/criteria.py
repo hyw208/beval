@@ -3,6 +3,60 @@ import numbers
 import operator
 
 
+class Const(object):
+
+    UNKNOWN = "__UNKNOWN__"
+    ERROR = "__ERROR__"
+
+    Bool = "Bool"
+    Eq = "Eq"
+    NotEq = "NotEq"
+    LtE = "LtE"
+    Lt = "Lt"
+    GtE = "GtE"
+    Gt = "Gt"
+    Between = "Between"
+    In = "In"
+    NotIn = "NotIn"
+    And = "And"
+    Or = "Or"
+    All = "All"
+    Any = "Any"
+    Not = "Not"
+
+    Ctx = "Ctx"
+    visit = "visit"
+
+    True_ = "True"
+    False_ = "False"
+    None_ = "None"
+
+    fuzzy = "fuzzy"
+
+    getitem = "__getitem__"
+    eval_ = "eval"
+
+    true = "true"
+    false = "false"
+
+    eq_ = "=="
+    ne_ = "!="
+    lt_ = "<"
+    le_ = "<="
+    gt_ = ">"
+    ge_ = ">="
+    in_ = "in"
+    not_in_ = "not in"
+    and_ = "and"
+    or_ = "or"
+    not_ = "not"
+
+    func = "func"
+    args = "args"
+    keywords = "keywords"
+    kwargs = "kwargs"
+
+
 def safe_monad(func, *args, **kwargs):
     try:
         obj = func(*args, **kwargs)
@@ -21,7 +75,7 @@ def safe(fuzzy, func, *args, **kwargs):
         return obj, None
 
     else:
-        return Criteria.UNKNOWN if fuzzy else Criteria.ERROR, err
+        return Const.UNKNOWN if fuzzy else Const.ERROR, err
 
 
 def access(ctx, key):
@@ -41,7 +95,7 @@ def assert_outcomes_d_w_a(std_types, fuzzy_types):
     def assert_outcomes_d(func):
 
         def decorated(criteria, ctx, fuzzy=False):
-            outcomes = fuzzy_types if (hasattr(ctx, 'fuzzy') and ctx.fuzzy) or fuzzy else std_types
+            outcomes = fuzzy_types if (hasattr(ctx, Const.fuzzy) and ctx.fuzzy) or fuzzy else std_types
             (ans, err) = func(criteria, ctx, fuzzy)
 
             if ans not in outcomes:
@@ -69,7 +123,7 @@ class AbstractCtx(object):
         if err is None:
             return obj
 
-        raise KeyError('cannot find item %s' % key)
+        raise KeyError("cannot find key '%s'" % key)
 
     def key(self, key):
         raise NotImplementedError
@@ -90,7 +144,7 @@ class Ctx(AbstractCtx):
         self._fuzzy = fuzzy
 
     def key(self, key):
-        if hasattr(self._one, "__getitem__") and key in self._one:
+        if hasattr(self._one, Const.getitem) and key in self._one:
             return self._one[key]
 
         elif isinstance(key, str) and hasattr(self._one, key):
@@ -98,20 +152,17 @@ class Ctx(AbstractCtx):
             return obj() if callable(obj) else obj
 
         else:
-            raise KeyError("cannot find item %s" % key)
+            raise KeyError("cannot find key '%s'" % key)
 
 
 class Criteria(object):
 
-    UNKNOWN = '__UNKNOWN__'
-    ERROR = '__ERROR__'
-
-    @assert_outcomes_d_w_a([True, False, ERROR], [True, False, UNKNOWN])
+    @assert_outcomes_d_w_a([True, False, Const.ERROR], [True, False, Const.UNKNOWN])
     def __call__(self, obj, fuzzy=False):
-        ctx = obj if isinstance(obj, Ctx) else CRITERIA_CLS_MAP["Ctx"](obj, fuzzy)
+        ctx = obj if isinstance(obj, Ctx) else criteria_class.instance(Const.Ctx, obj, fuzzy)
         return self.eval(ctx)
 
-    def compare(self, op, left, right, ctx):
+    def compare(self, ctx, key, op, left, right):
         return safe(self.fuzzy(ctx), op, left, right)
 
     def eval(self, ctx):
@@ -133,85 +184,85 @@ class Criteria(object):
         return self._stack.pop()
 
     def Bool(self, key):
-        c = CRITERIA_CLS_MAP["Bool"](key)
+        c = criteria_class.instance(Const.Bool, key)
         self._push(c)
         return self
 
     def Eq(self, key, right):
-        c = CRITERIA_CLS_MAP["Eq"](key, right)
+        c = criteria_class.instance(Const.Eq, key, right)
         self._push(c)
         return self
 
     def NotEq(self, key, right):
-        c = CRITERIA_CLS_MAP["NotEq"](key, right)
+        c = criteria_class.instance(Const.NotEq, key, right)
         self._push(c)
         return self
 
     def LtE(self, key, right):
-        c = CRITERIA_CLS_MAP["LtE"](key, right)
+        c = criteria_class.instance(Const.LtE, key, right)
         self._push(c)
         return self
 
     def Lt(self, key, right):
-        c = CRITERIA_CLS_MAP["Lt"](key, right)
+        c = criteria_class.instance(Const.Lt, key, right)
         self._push(c)
         return self
 
     def GtE(self, key, right):
-        c = CRITERIA_CLS_MAP["GtE"](key, right)
+        c = criteria_class.instance(Const.GtE, key, right)
         self._push(c)
         return self
 
     def Gt(self, key, right):
-        c = CRITERIA_CLS_MAP["Gt"](key, right)
+        c = criteria_class.instance(Const.Gt, key, right)
         self._push(c)
         return self
 
     def Between(self, lower, key, upper, lower_op=operator.le, upper_op=operator.lt):
-        c = CRITERIA_CLS_MAP["Between"](lower, key, upper, lower_op, upper_op)
+        c = criteria_class.instance(Const.Between, lower, key, upper, lower_op, upper_op)
         self._push(c)
         return self
 
     def In(self, key, *right):
-        c = CRITERIA_CLS_MAP["In"](key, *right)
+        c = criteria_class.instance(Const.In, key, *right)
         self._push(c)
         return self
 
     def NotIn(self, key, *right):
-        c = CRITERIA_CLS_MAP["NotIn"](key, *right)
+        c = criteria_class.instance(Const.NotIn, key, *right)
         self._push(c)
         return self
 
     def And(self):
         (r, l) = (self._pop(), self._pop())
-        c = CRITERIA_CLS_MAP["And"](l, r)
+        c = criteria_class.instance(Const.And, l, r)
         self._push(c)
         return self
 
     def Or(self):
         (r, l) = (self._pop(), self._pop())
-        c = CRITERIA_CLS_MAP["Or"](l, r)
+        c = criteria_class.instance(Const.Or, l, r)
         self._push(c)
         return self
 
     def All(self):
-        c = CRITERIA_CLS_MAP["All"](*self._stack)
+        c = criteria_class.instance(Const.All, *self._stack)
         self._stack = [c]
         return self
 
     def Any(self):
-        c = CRITERIA_CLS_MAP["Any"](*self._stack)
+        c = criteria_class.instance(Const.Any, *self._stack)
         self._stack = [c]
         return self
 
     def Not(self):
-        c = CRITERIA_CLS_MAP["Not"](self._pop())
+        c = criteria_class.instance(Const.Not, self._pop())
         self._push(c)
         return self
 
     def Done(self):
         if self.size() != 1:
-            raise SyntaxError('more items on stack still, %s' % self.size())
+            raise SyntaxError("more items on stack still, %s" % self.size())
 
         return self._stack.pop()
 
@@ -235,14 +286,14 @@ class Bool(Criteria):
             elif isinstance(obj, numbers.Number):
                 return bool(obj), None
 
-            elif isinstance(obj, str) and obj.lower() in ('true', 'false',):
-                return True if obj.lower() == 'true' else False, None
+            elif isinstance(obj, str) and obj.lower() in (Const.true, Const.false,):
+                return True if obj.lower() == Const.true else False, None
 
             else:
-                return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, TypeError("%s not supported" % type(obj))
+                return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, TypeError("%s is not supported" % type(obj))
 
         else:
-            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
+            return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
 
     def __str__(self):
         return "%s" % self._key
@@ -263,6 +314,7 @@ class Eq(Criteria):
         return self._op
 
     def __init__(self, key, right, op=operator.eq):
+        super(Eq, self).__init__()
         self._op = op
         self._key = types_supported_as_key(self, key)
         self._right = right
@@ -271,14 +323,14 @@ class Eq(Criteria):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
-            (obj_, err_) = self.compare(self._op, obj, self._right, ctx)
+            (obj_, err_) = self.compare(ctx, self._key, self._op, obj, self._right)
             return obj_, err_
 
         else:
-            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
+            return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
 
     def __str__(self):
-        return "%s %s %s" % (self._key, OP_TO_TEXT_MAP[self._op], quote(self._right))
+        return "%s %s %s" % (self._key, operator_ser_symbol.lookup(self._op), quote(self._right))
 
 
 class NotEq(Eq):
@@ -334,6 +386,7 @@ class Between(Criteria):
         return self._upper
 
     def __init__(self, lower, key, upper, lower_op=operator.le, upper_op=operator.lt):
+        super(Between, self).__init__()
         self._lower = lower
         self._lower_op = lower_op
         self._key = types_supported_as_key(self, key)
@@ -344,19 +397,21 @@ class Between(Criteria):
         (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
-            (obj_, err_) = self.compare(self._lower_op, self._lower, obj, ctx)
+            (obj_, err_) = self.compare(ctx, self._key, self._lower_op, self._lower, obj)
 
             if obj_ in (True, ):
-                (obj2_, err2_) = self.compare(self._upper_op, obj, self._upper, ctx)
+                (obj2_, err2_) = self.compare(ctx, self._key, self._upper_op, obj, self._upper)
                 return obj2_, err2_
 
             else:
                 return obj_, err_
         else:
-            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
+            return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
 
     def __str__(self):
-        return "%s %s %s %s %s" % (self._lower, OP_TO_TEXT_MAP[self._lower_op], self._key, OP_TO_TEXT_MAP[self._upper_op], self._upper)
+        return "%s %s %s %s %s" % \
+            (self._lower, operator_ser_symbol.lookup(self._lower_op),
+                self._key, operator_ser_symbol.lookup(self._upper_op), self._upper)
 
 
 class In(Eq):
@@ -364,8 +419,9 @@ class In(Eq):
     def __init__(self, key, *right):
         super(In, self).__init__(key, right)
 
-    def compare(self, op, left, right, ctx):
-        return safe_monad(op, left, right)
+    def compare(self, ctx, key, op, left, right):
+        func = in_syntax_extender_cmp_func.lookup(type(right))
+        return safe_monad(func, ctx, key, op, left, right) if func else safe_monad(op, left, right)
 
     def eval(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
@@ -375,7 +431,7 @@ class In(Eq):
             first_error = None
 
             for one in self.right:
-                (obj_, err_) = self.compare(self._op, obj, one, ctx)
+                (obj_, err_) = self.compare(ctx, self._key, self._op, obj, one)
                 if obj_ in (True,):
                     return obj_, first_error or err_
 
@@ -388,19 +444,19 @@ class In(Eq):
                         first_error = first_error or err_
 
                     else:
-                        return Criteria.ERROR, first_error or err_
+                        return Const.ERROR, first_error or err_
 
             if negative > 0:
                 return False, first_error
 
             else:
-                return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, first_error
+                return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, first_error
 
         else:
-            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, err
+            return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
 
     def __str__(self):
-        return "%s in (%s,)" % (self._key, ",".join(quote(one) for one in self._right))
+        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.in_), ",".join(quote(one) for one in self._right))
 
 
 class NotIn(In):
@@ -413,7 +469,7 @@ class NotIn(In):
         return not obj if obj in (True, False,) else obj, err
 
     def __str__(self):
-        return "%s not in (%s,)" % (self._key, ",".join(quote(one) for one in self._right))
+        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.not_in_), ",".join(quote(one) for one in self._right))
 
 
 class All(Criteria):
@@ -423,9 +479,10 @@ class All(Criteria):
         return self._many
 
     def __init__(self, *many):
+        super(All, self).__init__()
         for one in many:
             if not isinstance(one, Criteria):
-                raise TypeError("%s not supported" % type(one))
+                raise TypeError("%s is not supported" % type(one))
 
         self._many = many
 
@@ -448,16 +505,16 @@ class All(Criteria):
                     first_error = first_error or err
 
                 else:
-                    return Criteria.ERROR, first_error or err
+                    return Const.ERROR, first_error or err
 
         if positive > 0:
             return True, first_error
 
         else:
-            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, first_error
+            return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, first_error
 
     def __str__(self):
-        return "%s" % " and ".join( str(one) for one in self._many )
+        return (" %s " % operator_ser_symbol.lookup(Const.and_)).join(str(one) for one in self._many)
 
 
 class Any(All):
@@ -481,16 +538,16 @@ class Any(All):
                     first_error = first_error or err
 
                 else:
-                    return Criteria.ERROR, first_error or err
+                    return Const.ERROR, first_error or err
 
         if negative > 0:
             return False, first_error
 
         else:
-            return Criteria.UNKNOWN if self.fuzzy(ctx) else Criteria.ERROR, first_error
+            return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, first_error
 
     def __str__(self):
-        return "%s" % " or ".join( str(one) for one in self._many )
+        return (" %s " % operator_ser_symbol.lookup(Const.or_)).join( str(one) for one in self._many)
 
 
 class And(All):
@@ -507,7 +564,7 @@ class And(All):
         super(And, self).__init__(left, right)
 
     def __str__(self):
-        return "(%s and %s)" % (self.left, self.right)
+        return "(%s %s %s)" % (self.left, operator_ser_symbol.lookup(Const.and_), self.right)
 
 
 class Or(Any):
@@ -524,7 +581,7 @@ class Or(Any):
         super(Or, self).__init__(left, right)
 
     def __str__(self):
-        return "(%s or %s)" % (self.left, self.right)
+        return "(%s %s %s)" % (self.left, operator_ser_symbol.lookup(Const.or_), self.right)
 
 
 class Not(Criteria):
@@ -535,8 +592,9 @@ class Not(Criteria):
 
     def __init__(self, one):
         if not isinstance(one, Criteria):
-            raise TypeError("%s not supported" % type(one))
+            raise TypeError("%s is not supported" % type(one))
 
+        super(Not, self).__init__()
         self._one = one
 
     def eval(self, ctx):
@@ -544,7 +602,7 @@ class Not(Criteria):
         return not obj if obj in (True, False,) else obj, err
 
     def __str__(self):
-        return "not (%s)" % str(self._one)
+        return "%s (%s)" % (operator_ser_symbol.lookup(Const.not_), str(self._one))
 
 
 def quote(obj):
@@ -553,61 +611,8 @@ def quote(obj):
 
 def to_criteria(text):
     data = []
-    visit(ast.parse(text, mode='eval'), data)
+    criteria_class.instance(Const.visit, ast.parse(text, mode=Const.eval_), data)
     return data.pop()
-
-
-OP_TO_TEXT_MAP = {
-    operator.eq: "==",
-    operator.ne: "!=",
-    operator.lt: "<",
-    operator.le: "<=",
-    operator.gt: ">",
-    operator.ge: ">=",
-}
-
-
-AST_OP_TO_OPERATOR_MAP = {
-    ast.Eq: operator.eq,
-    ast.NotEq: operator.ne,
-    ast.Lt: operator.lt,
-    ast.LtE: operator.le,
-    ast.Gt: operator.gt,
-    ast.GtE: operator.ge,
-}
-
-
-AST_OP_TO_CRITERIA_MAP = {
-    ast.Eq: "Eq",
-    ast.NotEq: "NotEq",
-    ast.Lt: "Lt",
-    ast.LtE: "LtE",
-    ast.Gt: "Gt",
-    ast.GtE: "GtE",
-    ast.In: "In",
-    ast.NotIn: "NotIn",
-    ast.Not: "Not",
-}
-
-
-CRITERIA_CLS_MAP = {
-    "Bool": Bool,
-    "Eq": Eq,
-    "NotEq": NotEq,
-    "Between": Between,
-    "Gt": Gt,
-    "GtE": GtE,
-    "Lt": Lt,
-    "LtE": LtE,
-    "In": In,
-    "NotIn": NotIn,
-    "And": And,
-    "All": All,
-    "Or": Or,
-    "Any": Any,
-    "Not": Not,
-    "Ctx": Ctx,
-}
 
 
 def visit(node, data):
@@ -615,10 +620,10 @@ def visit(node, data):
     if isinstance(node, ast.Expression):
         visit(node.body, data)
         if len(data) != 1:
-            raise SyntaxError("do not support multiple expression nodes, %s" % len(data))
+            raise SyntaxError("multiple expression nodes, %s, are not supported" % len(data))
 
         obj = data.pop()
-        data.append(obj if isinstance(obj, Criteria) else CRITERIA_CLS_MAP["Bool"](obj))
+        data.append(obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj))
         return
 
     if isinstance(node, ast.BoolOp):
@@ -627,17 +632,18 @@ def visit(node, data):
             for value in node.values:
                 visit(value, data)
                 obj = data.pop()
-                values.append(obj if isinstance(obj, Criteria) else CRITERIA_CLS_MAP["Bool"](obj))
+                values.append(obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj))
 
-            cls = (CRITERIA_CLS_MAP["And"] if len(values) == 2 else CRITERIA_CLS_MAP["All"]) \
-                        if isinstance(node.op, ast.And) else \
-                            (CRITERIA_CLS_MAP["Or"] if len(values) == 2 else CRITERIA_CLS_MAP["Any"])
+            if isinstance(node.op, ast.And):
+                cls = (criteria_class.lookup(Const.And) if len(values) == 2 else criteria_class.lookup(Const.All))
+            else:
+                cls = (criteria_class.lookup(Const.Or) if len(values) == 2 else criteria_class.lookup(Const.Any))
 
             data.append(cls(*values))
             return
 
         else:
-            raise SyntaxError("do not support %s" % type(node.op))
+            raise SyntaxError("%s is not supported" % type(node.op))
 
     if isinstance(node, ast.Compare):
         visit(node.left, data)
@@ -645,13 +651,17 @@ def visit(node, data):
 
         if len(node.ops) == 1:
             op = node.ops[0]
-            cls = CRITERIA_CLS_MAP[AST_OP_TO_CRITERIA_MAP[type(op)]]
+            cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(op)))
 
             comparator = node.comparators[0]
             visit(comparator, data)
             right = data.pop()
 
-            c = cls(left, right) if cls not in (CRITERIA_CLS_MAP["In"], CRITERIA_CLS_MAP["NotIn"], ) else cls(left, *right)
+            if cls in (criteria_class.lookup(Const.In), criteria_class.lookup(Const.NotIn),):
+                c = cls(left, *right) if type(right) in (list, tuple,) else cls(left, right)
+            else:
+                c = cls(left, right)
+
             data.append(c)
             return
 
@@ -659,38 +669,38 @@ def visit(node, data):
             lower = left
 
             op = node.ops[0]
-            lower_op = AST_OP_TO_OPERATOR_MAP[type(op)]
+            lower_op = ast_op_to_operator.lookup(type(op))
 
             comparator = node.comparators[0]
             visit(comparator, data)
             one = data.pop()
 
             op = node.ops[1]
-            upper_op = AST_OP_TO_OPERATOR_MAP[type(op)]
+            upper_op = ast_op_to_operator.lookup(type(op))
 
             comparator = node.comparators[1]
             visit(comparator, data)
             upper = data.pop()
 
-            between = CRITERIA_CLS_MAP["Between"]( lower, one, upper, lower_op, upper_op )
+            between = criteria_class.instance(Const.Between, lower, one, upper, lower_op, upper_op)
             data.append(between)
             return
 
         else:
-            raise SyntaxError("do not support ast.Compare with more than 2 ops: %s" % node)
+            raise SyntaxError("ast.Compare with more than 2 ops: %s is not supported" % node)
 
     if isinstance(node, ast.UnaryOp):
         if isinstance(node.op, ast.Not):
             visit(node.operand, data)
             obj = data.pop()
-            criteria = obj if isinstance(obj, Criteria) else CRITERIA_CLS_MAP["Bool"](obj)
+            criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
 
-            cls = CRITERIA_CLS_MAP[AST_OP_TO_CRITERIA_MAP[type(node.op)]]
+            cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(node.op)))
             data.append(cls(criteria))
             return
 
         else:
-            raise SyntaxError("do not support %s" % type(node.op))
+            raise SyntaxError("%s is not supported" % type(node.op))
 
     if isinstance(node, ast.Tuple):
         values = []
@@ -709,18 +719,156 @@ def visit(node, data):
         return
 
     if isinstance(node, ast.Name):
-        if node.id == 'True':
-            id = True
+        if node.id == Const.True_:
+            id_ = True
 
-        elif node.id == 'False':
-            id = False
+        elif node.id == Const.False_:
+            id_ = False
 
-        elif node.id == 'None':
-            id = None
+        elif node.id == Const.None_:
+            id_ = None
 
         else:
-            id = node.id
+            id_ = node.id
 
-        data.append(id)
+        data.append(id_)
         return
+
+    if isinstance(node, ast.keyword):
+        (_, key), (_, value) = ast.iter_fields(node)
+        visit(value, data)
+        data.append((key, data.pop()))
+        return
+
+    if isinstance(node, ast.Call):
+        fields = {k: v for k, v in ast.iter_fields(node) if v}
+
+        visit(fields[Const.func], data)
+        func_name = data.pop()
+        func = in_syntax_extender_deser_func.lookup(func_name)
+        if not func:
+            raise SyntaxError("%s is not supported" % func_name)
+
+        args = list()
+        if Const.args in fields:
+            for arg in fields[Const.args]:
+                visit(arg, data)
+                args.append(data.pop())
+
+        keywords = {}
+        if Const.keywords in fields:
+            for keyword in fields[Const.keywords]:
+                visit(keyword, data)
+                k, v = data.pop()
+                keywords[k] = v
+
+        kwargs = {}
+        if Const.kwargs in fields:
+            (_, knodes), (_, vnodes) = ast.iter_fields(fields[Const.kwargs])
+            keys = list()
+            for knode in knodes:
+                visit(knode, data)
+                keys.append(data.pop())
+            values = list()
+            for vnode in vnodes:
+                visit(vnode, data)
+                values.append(data.pop())
+            kwargs = {k: v for k, v in zip(keys, values)}
+
+        merged = {}
+        if len(keywords) > 0:
+            merged.update(keywords)
+        if len(kwargs) > 0:
+            merged.update(kwargs)
+
+        data.append(func(*args, **merged))
+        return
+
+
+class Config(object):
+
+    @property
+    def config(self):
+        return self._config
+
+    def __init__(self, config):
+        self._config = config
+
+    def lookup(self, key):
+        return self._config.get(key, None)
+
+    def override(self, key, obj):
+        self._config[key] = obj
+
+    def instance(self, key, *args, **kwargs):
+        obj = self.lookup(key)
+        return obj(*args, **kwargs)
+
+
+operator_ser_symbol = Config({
+    operator.eq: Const.eq_,
+    operator.ne: Const.ne_,
+    operator.lt: Const.lt_,
+    operator.le: Const.le_,
+    operator.gt: Const.gt_,
+    operator.ge: Const.ge_,
+    Const.in_: Const.in_,
+    Const.not_in_: Const.not_in_,
+    Const.not_: Const.not_,
+    Const.and_: Const.and_,
+    Const.or_: Const.or_,
+})
+
+
+ast_op_to_criteria = Config({
+    ast.Eq: Const.Eq,
+    ast.NotEq: Const.NotEq,
+    ast.Lt: Const.Lt,
+    ast.LtE: Const.LtE,
+    ast.Gt: Const.Gt,
+    ast.GtE: Const.GtE,
+    ast.In: Const.In,
+    ast.NotIn: Const.NotIn,
+    ast.Not: Const.Not,
+})
+
+
+ast_op_to_operator = Config({
+    ast.Eq: operator.eq,
+    ast.NotEq: operator.ne,
+    ast.Lt: operator.lt,
+    ast.LtE: operator.le,
+    ast.Gt: operator.gt,
+    ast.GtE: operator.ge,
+})
+
+
+criteria_class = Config({
+    Const.Bool: Bool,
+    Const.Eq: Eq,
+    Const.NotEq: NotEq,
+    Const.Between: Between,
+    Const.Gt: Gt,
+    Const.GtE: GtE,
+    Const.Lt: Lt,
+    Const.LtE: LtE,
+    Const.In: In,
+    Const.NotIn: NotIn,
+    Const.And: And,
+    Const.All: All,
+    Const.Or: Or,
+    Const.Any: Any,
+    Const.Not: Not,
+    Const.Ctx: Ctx,
+    Const.visit: visit,
+})
+
+
+cTrue = criteria_class.instance(Const.Bool, True)
+cFalse = criteria_class.instance(Const.Bool, False)
+
+
+in_syntax_extender_cmp_func = Config({})
+in_syntax_extender_deser_func = Config({})
+
 

@@ -1,8 +1,7 @@
 import operator
 import unittest
 from unittest import TestCase
-
-from beval.criteria import Criteria, Eq, NotEq, Ctx, Gt, to_criteria, And, All
+from beval.criteria import Criteria, Const, Eq, NotEq, Ctx, Gt, to_criteria, And, All
 from test_helper import acura_small, acura_midsize
 
 
@@ -40,13 +39,13 @@ class TestEq(TestCase):
             ctx = Ctx(acura, True)
             (ans, error) = eq(ctx)
             self.assertTrue(ctx.fuzzy)
-            self.assertEqual(ans, Criteria.UNKNOWN)
+            self.assertEqual(ans, Const.UNKNOWN)
             self.assertIsInstance(error, KeyError)
 
             ctx = Ctx(acura, False)
             (ans, error) = eq(ctx)
             self.assertFalse(ctx.fuzzy)
-            self.assertEqual(ans, Criteria.ERROR)
+            self.assertEqual(ans, Const.ERROR)
             self.assertIsInstance(error, KeyError)
 
     def test_ser_eq(self):

@@ -1,8 +1,8 @@
 import operator
 import unittest
 from unittest import TestCase
-
-from beval.criteria import Criteria, Ctx, to_criteria, Bool, Between, Not, And, Or, Eq, NotEq, Gt, GtE, All, Any, In
+from beval.criteria import Criteria, Ctx, Const, to_criteria, Bool, Between, Not, And, Or, Eq, NotEq, Gt, GtE, All, Any, In, \
+    NotIn, in_syntax_extender_deser_func, in_syntax_extender_cmp_func, criteria_class, safe_monad, quote, operator_ser_symbol
 
 
 class TestVisit(TestCase):
@@ -18,7 +18,7 @@ class TestVisit(TestCase):
         tests.append(('"False"', 'False', bool, False, None))
         tests.append(('0', 0, bool, False, None))
         tests.append(('active', 'active', bool, True, None))
-        tests.append(('cpu', 'cpu', type(Criteria.ERROR), Criteria.ERROR, KeyError))
+        tests.append(('cpu', 'cpu', type(Const.ERROR), Const.ERROR, KeyError))
 
         for (text_, equal_, type_, ans_, err_) in tests:
             c = to_criteria(text_)
@@ -175,13 +175,13 @@ class TestVisit(TestCase):
         self.assertIsInstance(eq_, Eq)
         self.assertIsInstance(gt_, Gt)
         (ans, err) = eq_(ctx)
-        self.assertFalse(ans) # eq( True, 'True') is False
+        self.assertFalse(ans)  # eq( True, 'True') is False
         self.assertIsNone(err)
         (ans, err) = gt_(ctx)
         self.assertTrue(ans)
         self.assertIsNone(err)
         (ans, err) = and_(ctx)
-        self.assertFalse(ans) # False and True is False
+        self.assertFalse(ans)  # False and True is False
         self.assertIsNone(err)
 
     def test_bool_op_all(self):
@@ -321,6 +321,71 @@ class TestVisit(TestCase):
         self.assertIsNone(err)
         text = str(in_)
         self.assertEqual(expected, text)
+
+    def test_in_syntax_extender_with_group(self):
+
+        class Group(object):
+
+            def __init__(self, *members, **meta):
+                self._members = members
+                self._meta = meta
+                self._meta["category"] = meta["category"] if "category" in meta else "default"
+
+            def __str__(self):
+                args = ",".join(quote(member) for member in self._members)
+                kwargs = ",".join("%s=%s" % (k, quote(v)) for k, v in self._meta.iteritems())
+                return "group(%s,%s)" % (args, kwargs)
+
+            def values(self, ctx, key):
+                many = list()
+                for member in self._members:
+                    if member == "domestic":
+                        many.append("USA")
+                    else:
+                        many.append("nonUSA")
+
+                return many
+
+        def compare_value_with_group(ctx, key, op, left, group):
+            for value in group.values(ctx, key):
+                if op(left, value):
+                    return True
+            return False
+
+        in_syntax_extender_deser_func.override("group", Group)
+        in_syntax_extender_cmp_func.override(Group, compare_value_with_group)
+
+        expected = "source in (group('foreign',category='default',namespace='official'),)"
+        in_ = to_criteria(expected)
+        self.assertIsInstance(in_, In)
+        self.assertEqual(in_.key, "source")
+        self.assertIsInstance(in_.right[0], Group)
+
+        (ans, err) = in_({"source": "nonUSA"})
+        self.assertTrue(ans)
+        self.assertIsNone(err)
+        self.assertEqual(expected, str(in_))
+
+        (ans, err) = in_({"source": "USA"})
+        self.assertFalse(ans)
+        self.assertIsNone(err)
+        self.assertEqual(expected, str(in_))
+
+        expected = "source not in (group('foreign',category='default',namespace='official'),)"
+        not_in_ = to_criteria(expected)
+        self.assertIsInstance(not_in_, NotIn)
+        self.assertEqual(not_in_.key, "source")
+        self.assertIsInstance(not_in_.right[0], Group)
+
+        (ans, err) = not_in_({"source": "nonUSA"})
+        self.assertFalse(ans)
+        self.assertIsNone(err)
+        self.assertEqual(expected, str(not_in_))
+
+        (ans, err) = not_in_({"source": "USA"})
+        self.assertTrue(ans)
+        self.assertIsNone(err)
+        self.assertEqual(expected, str(not_in_))
 
 
 if __name__ == '__main__':

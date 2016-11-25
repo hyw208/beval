@@ -1,7 +1,6 @@
 import unittest
 from unittest import TestCase
-
-from beval.criteria import Criteria, Ctx, to_criteria
+from beval.criteria import Criteria, Const, Ctx, to_criteria
 from test_helper import acura_small as acura, CompareError
 
 
@@ -30,7 +29,7 @@ class TestAll(TestCase):
                 """ precise match """
                 ctx = Ctx(acura, False)
                 (ans, err) = all_(ctx)
-                self.assertEqual(ans, Criteria.ERROR)
+                self.assertEqual(ans, Const.ERROR)
 
                 """ fuzzy match """
                 ctx = Ctx(acura, True)
@@ -48,7 +47,7 @@ class TestAll(TestCase):
             """ precise match """
             ctx = Ctx(acura, False)
             (ans, err) = any_(ctx)
-            self.assertEqual(ans, Criteria.ERROR)
+            self.assertEqual(ans, Const.ERROR)
 
             """ fuzzy match """
             ctx = Ctx(acura, True)
@@ -86,7 +85,7 @@ class TestAll(TestCase):
         ctx = Ctx(acura, True)
         all_ = Criteria().Eq("x", "x").Eq("y", "y").Eq("z", "z").Eq("w", "w").All().Done()
         (ans, err) = all_(ctx)
-        self.assertEqual(ans, Criteria.UNKNOWN)
+        self.assertEqual(ans, Const.UNKNOWN)
         self.assertIsInstance(err, KeyError)
 
         and_ = Criteria().Eq("x", "x").Eq("y", "y").And().Eq("z", "z").And().Eq("w", "w").And().Done()
@@ -97,7 +96,7 @@ class TestAll(TestCase):
         ctx = Ctx(acura, False)
         all_ = Criteria().Eq("x", "x").Eq("y", "y").Eq("z", "z").Eq("w", "w").All().Done()
         (ans, err) = all_(ctx)
-        self.assertEqual(ans, Criteria.ERROR)
+        self.assertEqual(ans, Const.ERROR)
         self.assertIsInstance(err, KeyError)
 
         and_ = Criteria().Eq("x", "x").Eq("y", "y").And().Eq("z", "z").And().Eq("w", "w").And().Done()

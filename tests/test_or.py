@@ -1,11 +1,7 @@
 import unittest
 from unittest import TestCase
-from beval.criteria import Ctx, to_criteria, Or, Any, Eq, CRITERIA_CLS_MAP
+from beval.criteria import Ctx, to_criteria, Or, Any, Eq, criteria_class, cTrue, cFalse
 from test_helper import acura_small
-
-
-cTrue = CRITERIA_CLS_MAP["Bool"](True)
-cFalse = CRITERIA_CLS_MAP["Bool"](False)
 
 
 class TestOr(TestCase):

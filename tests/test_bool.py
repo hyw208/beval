@@ -1,10 +1,6 @@
 import unittest
 from unittest import TestCase
-from beval.criteria import Ctx, Bool, Not, CRITERIA_CLS_MAP
-
-
-cTrue = CRITERIA_CLS_MAP["Bool"](True)
-cFalse = CRITERIA_CLS_MAP["Bool"](False)
+from beval.criteria import Ctx, Bool, Not, cTrue, cFalse
 
 
 class TestBool(TestCase):
