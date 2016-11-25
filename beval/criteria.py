@@ -68,16 +68,6 @@ def safe_monad(func, *args, **kwargs):
         return obj, None
 
 
-def safe(fuzzy, func, *args, **kwargs):
-    (obj, err) = safe_monad(func, *args, **kwargs)
-
-    if err is None:
-        return obj, None
-
-    else:
-        return Const.UNKNOWN if fuzzy else Const.ERROR, err
-
-
 def access(ctx, key):
     return ctx[key]
 
@@ -163,7 +153,8 @@ class Criteria(object):
         return self.eval(ctx)
 
     def compare(self, ctx, key, op, left, right):
-        return safe(self.fuzzy(ctx), op, left, right)
+        func = SyntaxAstCallExtender.find_comparator(type(right))
+        return safe_monad(func, ctx, key, op, left, right) if func else safe_monad(op, left, right)
 
     def eval(self, ctx):
         raise NotImplementedError
@@ -171,8 +162,8 @@ class Criteria(object):
     def fuzzy(self, ctx):
         return ctx.fuzzy
 
-    def __init__(self):
-        self._stack = []
+    def __init__(self, stack=True):
+        self._stack = [] if stack else None
 
     def size(self):
         return len(self._stack)
@@ -274,6 +265,7 @@ class Bool(Criteria):
         return self._key
 
     def __init__(self, key):
+        super(Bool, self).__init__(stack=False)
         self._key = types_supported_as_key(self, key)
 
     def eval(self, ctx):
@@ -314,7 +306,7 @@ class Eq(Criteria):
         return self._op
 
     def __init__(self, key, right, op=operator.eq):
-        super(Eq, self).__init__()
+        super(Eq, self).__init__(stack=False)
         self._op = op
         self._key = types_supported_as_key(self, key)
         self._right = right
@@ -324,7 +316,12 @@ class Eq(Criteria):
 
         if err is None:
             (obj_, err_) = self.compare(ctx, self._key, self._op, obj, self._right)
-            return obj_, err_
+
+            if err_ is None:
+                return obj_, None
+
+            else:
+                return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err_
 
         else:
             return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
@@ -386,7 +383,7 @@ class Between(Criteria):
         return self._upper
 
     def __init__(self, lower, key, upper, lower_op=operator.le, upper_op=operator.lt):
-        super(Between, self).__init__()
+        super(Between, self).__init__(stack=False)
         self._lower = lower
         self._lower_op = lower_op
         self._key = types_supported_as_key(self, key)
@@ -399,12 +396,22 @@ class Between(Criteria):
         if err is None:
             (obj_, err_) = self.compare(ctx, self._key, self._lower_op, self._lower, obj)
 
-            if obj_ in (True, ):
+            if obj_ in (True,):
                 (obj2_, err2_) = self.compare(ctx, self._key, self._upper_op, obj, self._upper)
-                return obj2_, err2_
+
+                if err2_ is None:
+                    return obj2_, None
+
+                else:
+                    return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err2_
 
             else:
-                return obj_, err_
+                if err_ is None:
+                    return obj_, None
+
+                else:
+                    return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err_
+
         else:
             return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
 
@@ -418,10 +425,6 @@ class In(Eq):
 
     def __init__(self, key, *right):
         super(In, self).__init__(key, right)
-
-    def compare(self, ctx, key, op, left, right):
-        func = in_syntax_extender_cmp_func.lookup(type(right))
-        return safe_monad(func, ctx, key, op, left, right) if func else safe_monad(op, left, right)
 
     def eval(self, ctx):
         (obj, err) = safe_monad(access, ctx, self._key)
@@ -479,7 +482,7 @@ class All(Criteria):
         return self._many
 
     def __init__(self, *many):
-        super(All, self).__init__()
+        super(All, self).__init__(stack=False)
         for one in many:
             if not isinstance(one, Criteria):
                 raise TypeError("%s is not supported" % type(one))
@@ -594,7 +597,7 @@ class Not(Criteria):
         if not isinstance(one, Criteria):
             raise TypeError("%s is not supported" % type(one))
 
-        super(Not, self).__init__()
+        super(Not, self).__init__(stack=False)
         self._one = one
 
     def eval(self, ctx):
@@ -745,7 +748,7 @@ def visit(node, data):
 
         visit(fields[Const.func], data)
         func_name = data.pop()
-        func = in_syntax_extender_deser_func.lookup(func_name)
+        func = SyntaxAstCallExtender.find_deserializer(func_name)
         if not func:
             raise SyntaxError("%s is not supported" % func_name)
 
@@ -859,11 +862,43 @@ criteria_class = Config({
 })
 
 
+class SyntaxAstCallExtender(object):
+
+    deserializers = {}
+    comparators = {}
+
+    @classmethod
+    def register(cls, extender):
+        SyntaxAstCallExtender.deserializers[extender.name()] = extender
+        SyntaxAstCallExtender.comparators[extender.type()] = extender
+
+    @classmethod
+    def find_deserializer(cls, name):
+        extender = SyntaxAstCallExtender.deserializers.get(name, None)
+        if extender:
+            return extender.deserialize
+
+    @classmethod
+    def find_comparator(cls, type_):
+        extender = SyntaxAstCallExtender.comparators.get(type_, None)
+        if extender:
+            return extender.compare
+
+    def name(self):
+        raise NotImplementedError
+
+    def deserialize(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def type(self):
+        raise NotImplementedError
+
+    def compare(self, ctx, key, op, left, right):
+        raise NotImplementedError
+
+
 cTrue = criteria_class.instance(Const.Bool, True)
 cFalse = criteria_class.instance(Const.Bool, False)
 
-
-in_syntax_extender_cmp_func = Config({})
-in_syntax_extender_deser_func = Config({})
 
 

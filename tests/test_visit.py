@@ -2,7 +2,7 @@ import operator
 import unittest
 from unittest import TestCase
 from beval.criteria import Criteria, Ctx, Const, to_criteria, Bool, Between, Not, And, Or, Eq, NotEq, Gt, GtE, All, Any, In, \
-    NotIn, in_syntax_extender_deser_func, in_syntax_extender_cmp_func, criteria_class, safe_monad, quote, operator_ser_symbol
+    NotIn, SyntaxAstCallExtender, criteria_class, safe_monad, quote, operator_ser_symbol
 
 
 class TestVisit(TestCase):
@@ -322,7 +322,7 @@ class TestVisit(TestCase):
         text = str(in_)
         self.assertEqual(expected, text)
 
-    def test_in_syntax_extender_with_group(self):
+    def test_syntax_extender_with_group(self):
 
         class Group(object):
 
@@ -346,14 +346,24 @@ class TestVisit(TestCase):
 
                 return many
 
-        def compare_value_with_group(ctx, key, op, left, group):
-            for value in group.values(ctx, key):
-                if op(left, value):
-                    return True
-            return False
+        class GroupAstCallExtender(SyntaxAstCallExtender):
 
-        in_syntax_extender_deser_func.override("group", Group)
-        in_syntax_extender_cmp_func.override(Group, compare_value_with_group)
+            def name(self):
+                return "group"
+
+            def type(self):
+                return Group
+
+            def deserialize(self, *args, **kwargs):
+                return Group(*args, **kwargs)
+
+            def compare(self, ctx, key, op, left, group):
+                for value in group.values(ctx, key):
+                    if op(left, value):
+                        return True
+                return False
+
+        SyntaxAstCallExtender.register(GroupAstCallExtender())
 
         expected = "source in (group('foreign',category='default',namespace='official'),)"
         in_ = to_criteria(expected)
