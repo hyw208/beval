@@ -1,6 +1,7 @@
 import ast
 import numbers
 import operator
+import collections
 
 
 class Const(object):
@@ -726,7 +727,7 @@ def visit(node, data):
         fields = {k: v for k, v in ast.iter_fields(node) if v}
 
         visit(fields[Const.func], data)
-        name, args, keywords, kwargs = data.pop(), list(), dict(), dict()
+        name, args, kwargs = data.pop(), list(), collections.OrderedDict()
 
         func = SyntaxAstCallExtender.find_deserializer(name)
         if not func:
@@ -741,7 +742,7 @@ def visit(node, data):
             for keyword in fields[Const.keywords]:
                 (_, key), (_, value) = ast.iter_fields(keyword)
                 visit(value, data)
-                keywords[key] = data.pop()
+                kwargs[key] = data.pop()
 
         if Const.kwargs in fields:
             (_, knodes), (_, vnodes) = ast.iter_fields(fields[Const.kwargs])
@@ -752,7 +753,6 @@ def visit(node, data):
                 value = data.pop()
                 kwargs[key] = value
 
-        kwargs.update(keywords)
         obj = func(*args, **kwargs)
         data.append(obj)
         return
@@ -867,7 +867,7 @@ class bEvalVisitor(ast.NodeVisitor):
         fields = {k: v for k, v in ast.iter_fields(node) if v}
 
         self.visit(fields[Const.func])
-        name, args, keywords, kwargs = self.data.pop(), list(), dict(), dict()
+        name, args, kwargs = self.data.pop(), list(), collections.OrderedDict()
 
         func = SyntaxAstCallExtender.find_deserializer(name)
         if not func:
@@ -882,7 +882,7 @@ class bEvalVisitor(ast.NodeVisitor):
             for keyword in fields[Const.keywords]:
                 (_, key), (_, value) = ast.iter_fields(keyword)
                 self.visit(value)
-                keywords[key] = self.data.pop()
+                kwargs[key] = self.data.pop()
 
         if Const.kwargs in fields:
             (_, knodes), (_, vnodes) = ast.iter_fields(fields[Const.kwargs])
@@ -893,7 +893,6 @@ class bEvalVisitor(ast.NodeVisitor):
                 value = self.data.pop()
                 kwargs[key] = value
 
-        kwargs.update(keywords)
         obj = func(*args, **kwargs)
         self.data.append(obj)
 
