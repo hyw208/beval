@@ -2,7 +2,7 @@ import operator
 import unittest
 from unittest import TestCase
 from beval.criteria import Criteria, Ctx, Const, to_criteria, Bool, Between, Not, And, Or, Eq, NotEq, Gt, GtE, All, Any, In, \
-    NotIn, SyntaxAstCallExtender, criteria_class, safe_monad, quote, operator_ser_symbol, bEvalVisitor
+    NotIn, SyntaxAstCallExtender, criteria_class, safe_monad, _quote, operator_ser_symbol, bEvalVisitor
 
 
 class TestVisit(TestCase):
@@ -351,8 +351,8 @@ class TestVisit(TestCase):
                 self._meta[Group.NAMESPACE] = meta[Group.NAMESPACE] if Group.NAMESPACE in meta else Group.OFFICIAL
 
             def __str__(self):
-                args = ",".join(quote(member) for member in self._members)
-                kwargs = ",".join("%s=%s" % (k, quote(v)) for k, v in self._meta.iteritems())
+                args = ",".join(_quote(member) for member in self._members)
+                kwargs = ",".join("%s=%s" % (k, _quote(v)) for k, v in self._meta.iteritems())
                 return "group(%s,%s)" % (args, kwargs)
 
             def values(self, ctx, key):

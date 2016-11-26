@@ -58,6 +58,10 @@ class Const(object):
     kwargs = "kwargs"
 
 
+def to_criteria(expr):
+    return bEvalVisitor(expr).go()
+
+
 def safe_monad(func, *args, **kwargs):
     try:
         obj = func(*args, **kwargs)
@@ -69,11 +73,15 @@ def safe_monad(func, *args, **kwargs):
         return obj, None
 
 
-def access(ctx, key):
+def _quote(obj):
+    return ("'%s'" if isinstance(obj, str) else "%s") % obj
+
+
+def _access(ctx, key):
     return ctx[key]
 
 
-def types_supported_as_key(criteria, key):
+def _types_supported_as_key(criteria, key):
     if isinstance(key, str) or isinstance(key, bool) or isinstance(key, numbers.Number):
         return key
 
@@ -81,7 +89,7 @@ def types_supported_as_key(criteria, key):
         raise TypeError("%s is not supported as key for %s" % type(key), type(criteria))
 
 
-def assert_outcomes_d_w_a(std_types, fuzzy_types):
+def _assert_outcomes_d_w_a(std_types, fuzzy_types):
     """ remove this decorator after fully tested with use cases """
     def assert_outcomes_d(func):
 
@@ -148,7 +156,7 @@ class Ctx(AbstractCtx):
 
 class Criteria(object):
 
-    @assert_outcomes_d_w_a([True, False, Const.ERROR], [True, False, Const.UNKNOWN])
+    @_assert_outcomes_d_w_a([True, False, Const.ERROR], [True, False, Const.UNKNOWN])
     def __call__(self, obj, fuzzy=False):
         ctx = obj if isinstance(obj, Ctx) else criteria_class.instance(Const.Ctx, obj, fuzzy)
         return self.eval(ctx)
@@ -267,10 +275,10 @@ class Bool(Criteria):
 
     def __init__(self, key):
         super(Bool, self).__init__(stack=False)
-        self._key = types_supported_as_key(self, key)
+        self._key = _types_supported_as_key(self, key)
 
     def eval(self, ctx):
-        (obj, err) = safe_monad(access, ctx, self._key)
+        (obj, err) = safe_monad(_access, ctx, self._key)
 
         if err is None:
             if isinstance(obj, bool):
@@ -309,11 +317,11 @@ class Eq(Criteria):
     def __init__(self, key, right, op=operator.eq):
         super(Eq, self).__init__(stack=False)
         self._op = op
-        self._key = types_supported_as_key(self, key)
+        self._key = _types_supported_as_key(self, key)
         self._right = right
 
     def eval(self, ctx):
-        (obj, err) = safe_monad(access, ctx, self._key)
+        (obj, err) = safe_monad(_access, ctx, self._key)
 
         if err is None:
             (obj_, err_) = self.compare(ctx, self._key, self._op, obj, self._right)
@@ -328,7 +336,7 @@ class Eq(Criteria):
             return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
 
     def __str__(self):
-        return "%s %s %s" % (self._key, operator_ser_symbol.lookup(self._op), quote(self._right))
+        return "%s %s %s" % (self._key, operator_ser_symbol.lookup(self._op), _quote(self._right))
 
 
 class NotEq(Eq):
@@ -387,12 +395,12 @@ class Between(Criteria):
         super(Between, self).__init__(stack=False)
         self._lower = lower
         self._lower_op = lower_op
-        self._key = types_supported_as_key(self, key)
+        self._key = _types_supported_as_key(self, key)
         self._upper_op = upper_op
         self._upper = upper
 
     def eval(self, ctx):
-        (obj, err) = safe_monad(access, ctx, self._key)
+        (obj, err) = safe_monad(_access, ctx, self._key)
 
         if err is None:
             (obj_, err_) = self.compare(ctx, self._key, self._lower_op, self._lower, obj)
@@ -428,7 +436,7 @@ class In(Eq):
         super(In, self).__init__(key, right)
 
     def eval(self, ctx):
-        (obj, err) = safe_monad(access, ctx, self._key)
+        (obj, err) = safe_monad(_access, ctx, self._key)
 
         if err is None:
             negative = 0
@@ -460,7 +468,7 @@ class In(Eq):
             return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
 
     def __str__(self):
-        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.in_), ",".join(quote(one) for one in self._right))
+        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.in_), ",".join(_quote(one) for one in self._right))
 
 
 class NotIn(In):
@@ -473,7 +481,7 @@ class NotIn(In):
         return not obj if obj in (True, False,) else obj, err
 
     def __str__(self):
-        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.not_in_), ",".join(quote(one) for one in self._right))
+        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.not_in_), ",".join(_quote(one) for one in self._right))
 
 
 class All(Criteria):
@@ -607,188 +615,6 @@ class Not(Criteria):
 
     def __str__(self):
         return "%s (%s)" % (operator_ser_symbol.lookup(Const.not_), str(self._one))
-
-
-def quote(obj):
-    return ("'%s'" if isinstance(obj, str) else "%s") % obj
-
-
-def compare_parsers(func):
-
-    def decorated(expr):
-        print "original expr: %s" % expr
-        criteria1 = func(expr)
-
-        bev = bEvalVisitor(expr)
-        criteria2 = bev.go()
-
-        print "criteria1 type %s" % type(criteria1)
-        print "criteria2 type %s" % type(criteria2)
-        if type(criteria1) != type(criteria2):
-            raise AssertionError("criteria types are different, %s != %s" % (type(criteria1), type(criteria2)))
-
-        text1 = str(criteria1)
-        text2 = str(criteria2)
-        print "criteria1 serialized expr, %s" % text1
-        print "criteria2 serialized expr, %s" % text2
-        if text1 != text2:
-            raise AssertionError("serialized texts are different, %s != %s" % (text1, text2))
-
-        return criteria2
-
-    return decorated
-
-
-@compare_parsers
-def to_criteria(expr):
-    data = list()
-    criteria_class.instance(Const.visit, ast.parse(expr, mode=Const.eval_), data)
-    return data.pop()
-
-
-def visit(node, data):
-
-    if isinstance(node, ast.Expression):
-        visit(node.body, data)
-        obj = data.pop()
-        criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
-        data.append(criteria)
-        return
-
-    if isinstance(node, ast.BoolOp):
-        if type(node.op) not in (ast.And, ast.Or,):
-            raise SyntaxError("%s is not supported" % type(node.op))
-
-        many = list()
-        for value in node.values:
-            visit(value, data)
-            obj = data.pop()
-            criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
-            many.append(criteria)
-
-        if isinstance(node.op, ast.And):
-            cls = (criteria_class.lookup(Const.And) if len(many) == 2 else criteria_class.lookup(Const.All))
-
-        else:
-            cls = (criteria_class.lookup(Const.Or) if len(many) == 2 else criteria_class.lookup(Const.Any))
-
-        criteria = cls(*many)
-        data.append(criteria)
-        return
-
-    if isinstance(node, ast.UnaryOp):
-        if type(node.op) not in (ast.Not,):
-            raise SyntaxError("%s is not supported" % type(node.op))
-
-        visit(node.operand, data)
-        obj = data.pop()
-        criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
-
-        cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(node.op)))
-        criteria = cls(criteria)
-        data.append(criteria)
-        return
-
-    if isinstance(node, ast.Compare):
-        if len(node.ops) not in (1, 2,):
-            raise SyntaxError("ast.Compare with more than 2 ops: %s is not supported" % node)
-
-        if len(node.ops) == 1:
-            visit(node.left, data)
-            left = data.pop()
-
-            visit(node.comparators[0], data)
-            right = data.pop()
-
-            cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(node.ops[0])))
-            criteria = cls(left, *right) if type(right) in (list, tuple,) else cls(left, right)
-            data.append(criteria)
-            return
-
-        else:
-            visit(node.left, data)
-            lower = data.pop()
-
-            lower_op = ast_op_to_operator.lookup(type(node.ops[0]))
-
-            visit(node.comparators[0], data)
-            one = data.pop()
-
-            upper_op = ast_op_to_operator.lookup(type(node.ops[1]))
-
-            visit(node.comparators[1], data)
-            upper = data.pop()
-
-            criteria = criteria_class.instance(Const.Between, lower, one, upper, lower_op, upper_op)
-            data.append(criteria)
-            return
-
-    if isinstance(node, ast.Call):
-        fields = {k: v for k, v in ast.iter_fields(node) if v}
-
-        visit(fields[Const.func], data)
-        name, args, kwargs = data.pop(), list(), collections.OrderedDict()
-
-        func = SyntaxAstCallExtender.find_deserializer(name)
-        if not func:
-            raise SyntaxError("%s is not supported" % name)
-
-        if Const.args in fields:
-            for arg in fields[Const.args]:
-                visit(arg, data)
-                args.append(data.pop())
-
-        if Const.keywords in fields:
-            for keyword in fields[Const.keywords]:
-                (_, key), (_, value) = ast.iter_fields(keyword)
-                visit(value, data)
-                kwargs[key] = data.pop()
-
-        if Const.kwargs in fields:
-            (_, knodes), (_, vnodes) = ast.iter_fields(fields[Const.kwargs])
-            for knode, vnode in zip(knodes, vnodes):
-                visit(knode, data)
-                key = data.pop()
-                visit(vnode, data)
-                value = data.pop()
-                kwargs[key] = value
-
-        obj = func(*args, **kwargs)
-        data.append(obj)
-        return
-
-    if isinstance(node, ast.Tuple):
-        values = list()
-        for e in node.elts:
-            visit(e, data)
-            values.append(data.pop())
-
-        data.append(values)
-        return
-
-    if isinstance(node, ast.Num):
-        data.append(node.n)
-        return
-
-    if isinstance(node, ast.Str):
-        data.append(node.s)
-        return
-
-    if isinstance(node, ast.Name):
-        if node.id == Const.True_:
-            id_ = True
-
-        elif node.id == Const.False_:
-            id_ = False
-
-        elif node.id == Const.None_:
-            id_ = None
-
-        else:
-            id_ = node.id
-
-        data.append(id_)
-        return
 
 
 class bEvalVisitor(ast.NodeVisitor):
@@ -931,6 +757,41 @@ class bEvalVisitor(ast.NodeVisitor):
         return self.data.pop()
 
 
+class SyntaxAstCallExtender(object):
+
+    deserializers = dict()
+    comparators = dict()
+
+    @classmethod
+    def register(cls, extender):
+        SyntaxAstCallExtender.deserializers[extender.name()] = extender
+        SyntaxAstCallExtender.comparators[extender.type()] = extender
+
+    @classmethod
+    def find_deserializer(cls, name):
+        extender = SyntaxAstCallExtender.deserializers.get(name, None)
+        if extender:
+            return extender.deserialize
+
+    @classmethod
+    def find_comparator(cls, type_):
+        extender = SyntaxAstCallExtender.comparators.get(type_, None)
+        if extender:
+            return extender.compare
+
+    def name(self):
+        raise NotImplementedError
+
+    def deserialize(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def type(self):
+        raise NotImplementedError
+
+    def compare(self, ctx, key, op, left, right):
+        raise NotImplementedError
+
+
 class Config(object):
 
     @property
@@ -1006,43 +867,7 @@ criteria_class = Config({
     Const.Any: Any,
     Const.Not: Not,
     Const.Ctx: Ctx,
-    Const.visit: visit,
 })
-
-
-class SyntaxAstCallExtender(object):
-
-    deserializers = dict()
-    comparators = dict()
-
-    @classmethod
-    def register(cls, extender):
-        SyntaxAstCallExtender.deserializers[extender.name()] = extender
-        SyntaxAstCallExtender.comparators[extender.type()] = extender
-
-    @classmethod
-    def find_deserializer(cls, name):
-        extender = SyntaxAstCallExtender.deserializers.get(name, None)
-        if extender:
-            return extender.deserialize
-
-    @classmethod
-    def find_comparator(cls, type_):
-        extender = SyntaxAstCallExtender.comparators.get(type_, None)
-        if extender:
-            return extender.compare
-
-    def name(self):
-        raise NotImplementedError
-
-    def deserialize(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def type(self):
-        raise NotImplementedError
-
-    def compare(self, ctx, key, op, left, right):
-        raise NotImplementedError
 
 
 cTrue = criteria_class.instance(Const.Bool, True)
