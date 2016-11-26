@@ -24,9 +24,8 @@ class Const(object):
     All = "All"
     Any = "Any"
     Not = "Not"
-
     Ctx = "Ctx"
-    visit = "visit"
+    Visitor = "Visitor"
 
     True_ = "True"
     False_ = "False"
@@ -59,7 +58,7 @@ class Const(object):
 
 
 def to_criteria(expr):
-    return bEvalVisitor(expr).go()
+    return criteria_class.instance(Const.Visitor, expr).go()
 
 
 def safe_monad(func, *args, **kwargs):
@@ -867,6 +866,7 @@ criteria_class = Config({
     Const.Any: Any,
     Const.Not: Not,
     Const.Ctx: Ctx,
+    Const.Visitor: bEvalVisitor,
 })
 
 
