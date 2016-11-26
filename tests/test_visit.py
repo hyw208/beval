@@ -2,7 +2,7 @@ import operator
 import unittest
 from unittest import TestCase
 from beval.criteria import Criteria, Ctx, Const, to_criteria, Bool, Between, Not, And, Or, Eq, NotEq, Gt, GtE, All, Any, In, \
-    NotIn, SyntaxAstCallExtender, criteria_class, safe_monad, quote, operator_ser_symbol
+    NotIn, SyntaxAstCallExtender, criteria_class, safe_monad, quote, operator_ser_symbol, bEvalVisitor
 
 
 class TestVisit(TestCase):
@@ -423,6 +423,7 @@ class TestVisit(TestCase):
             self.assertEqual(group.category, "default")
             self.assertEqual(group.namespace, "official")
             self.assertEqual(expected, str(group))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -163,7 +163,7 @@ class Criteria(object):
         return ctx.fuzzy
 
     def __init__(self, stack=True):
-        self._stack = [] if stack else None
+        self._stack = list() if stack else None
 
     def size(self):
         return len(self._stack)
@@ -612,9 +612,36 @@ def quote(obj):
     return ("'%s'" if isinstance(obj, str) else "%s") % obj
 
 
-def to_criteria(text):
-    data = []
-    criteria_class.instance(Const.visit, ast.parse(text, mode=Const.eval_), data)
+def compare_parsers(func):
+
+    def decorated(expr):
+        print "original expr: %s" % expr
+        criteria1 = func(expr)
+
+        bev = bEvalVisitor(expr)
+        criteria2 = bev.go()
+
+        print "criteria1 type %s" % type(criteria1)
+        print "criteria2 type %s" % type(criteria2)
+        if type(criteria1) != type(criteria2):
+            raise AssertionError("criteria types are different, %s != %s" % (type(criteria1), type(criteria2)))
+
+        text1 = str(criteria1)
+        text2 = str(criteria2)
+        print "criteria1 serialized expr, %s" % text1
+        print "criteria2 serialized expr, %s" % text2
+        if text1 != text2:
+            raise AssertionError("serialized texts are different, %s != %s" % (text1, text2))
+
+        return criteria2
+
+    return decorated
+
+
+@compare_parsers
+def to_criteria(expr):
+    data = list()
+    criteria_class.instance(Const.visit, ast.parse(expr, mode=Const.eval_), data)
     return data.pop()
 
 
@@ -622,94 +649,120 @@ def visit(node, data):
 
     if isinstance(node, ast.Expression):
         visit(node.body, data)
-        if len(data) != 1:
-            raise SyntaxError("multiple expression nodes, %s, are not supported" % len(data))
-
         obj = data.pop()
-        data.append(obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj))
+        criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
+        data.append(criteria)
         return
 
     if isinstance(node, ast.BoolOp):
-        if isinstance(node.op, ast.And) or isinstance(node.op, ast.Or):
-            values = []
-            for value in node.values:
-                visit(value, data)
-                obj = data.pop()
-                values.append(obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj))
-
-            if isinstance(node.op, ast.And):
-                cls = (criteria_class.lookup(Const.And) if len(values) == 2 else criteria_class.lookup(Const.All))
-            else:
-                cls = (criteria_class.lookup(Const.Or) if len(values) == 2 else criteria_class.lookup(Const.Any))
-
-            data.append(cls(*values))
-            return
-
-        else:
+        if type(node.op) not in (ast.And, ast.Or,):
             raise SyntaxError("%s is not supported" % type(node.op))
 
-    if isinstance(node, ast.Compare):
-        visit(node.left, data)
-        left = data.pop()
-
-        if len(node.ops) == 1:
-            op = node.ops[0]
-            cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(op)))
-
-            comparator = node.comparators[0]
-            visit(comparator, data)
-            right = data.pop()
-
-            if cls in (criteria_class.lookup(Const.In), criteria_class.lookup(Const.NotIn),):
-                c = cls(left, *right) if type(right) in (list, tuple,) else cls(left, right)
-            else:
-                c = cls(left, right)
-
-            data.append(c)
-            return
-
-        elif len(node.ops) == 2:
-            lower = left
-
-            op = node.ops[0]
-            lower_op = ast_op_to_operator.lookup(type(op))
-
-            comparator = node.comparators[0]
-            visit(comparator, data)
-            one = data.pop()
-
-            op = node.ops[1]
-            upper_op = ast_op_to_operator.lookup(type(op))
-
-            comparator = node.comparators[1]
-            visit(comparator, data)
-            upper = data.pop()
-
-            between = criteria_class.instance(Const.Between, lower, one, upper, lower_op, upper_op)
-            data.append(between)
-            return
-
-        else:
-            raise SyntaxError("ast.Compare with more than 2 ops: %s is not supported" % node)
-
-    if isinstance(node, ast.UnaryOp):
-        if isinstance(node.op, ast.Not):
-            visit(node.operand, data)
+        many = list()
+        for value in node.values:
+            visit(value, data)
             obj = data.pop()
             criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
+            many.append(criteria)
 
-            cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(node.op)))
-            data.append(cls(criteria))
+        if isinstance(node.op, ast.And):
+            cls = (criteria_class.lookup(Const.And) if len(many) == 2 else criteria_class.lookup(Const.All))
+
+        else:
+            cls = (criteria_class.lookup(Const.Or) if len(many) == 2 else criteria_class.lookup(Const.Any))
+
+        criteria = cls(*many)
+        data.append(criteria)
+        return
+
+    if isinstance(node, ast.UnaryOp):
+        if type(node.op) not in (ast.Not,):
+            raise SyntaxError("%s is not supported" % type(node.op))
+
+        visit(node.operand, data)
+        obj = data.pop()
+        criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
+
+        cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(node.op)))
+        criteria = cls(criteria)
+        data.append(criteria)
+        return
+
+    if isinstance(node, ast.Compare):
+        if len(node.ops) not in (1, 2,):
+            raise SyntaxError("ast.Compare with more than 2 ops: %s is not supported" % node)
+
+        if len(node.ops) == 1:
+            visit(node.left, data)
+            left = data.pop()
+
+            visit(node.comparators[0], data)
+            right = data.pop()
+
+            cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(node.ops[0])))
+            criteria = cls(left, *right) if type(right) in (list, tuple,) else cls(left, right)
+            data.append(criteria)
             return
 
         else:
-            raise SyntaxError("%s is not supported" % type(node.op))
+            visit(node.left, data)
+            lower = data.pop()
+
+            lower_op = ast_op_to_operator.lookup(type(node.ops[0]))
+
+            visit(node.comparators[0], data)
+            one = data.pop()
+
+            upper_op = ast_op_to_operator.lookup(type(node.ops[1]))
+
+            visit(node.comparators[1], data)
+            upper = data.pop()
+
+            criteria = criteria_class.instance(Const.Between, lower, one, upper, lower_op, upper_op)
+            data.append(criteria)
+            return
+
+    if isinstance(node, ast.Call):
+        fields = {k: v for k, v in ast.iter_fields(node) if v}
+
+        visit(fields[Const.func], data)
+        name, args, keywords, kwargs = data.pop(), list(), dict(), dict()
+
+        func = SyntaxAstCallExtender.find_deserializer(name)
+        if not func:
+            raise SyntaxError("%s is not supported" % name)
+
+        if Const.args in fields:
+            for arg in fields[Const.args]:
+                visit(arg, data)
+                args.append(data.pop())
+
+        if Const.keywords in fields:
+            for keyword in fields[Const.keywords]:
+                (_, key), (_, value) = ast.iter_fields(keyword)
+                visit(value, data)
+                keywords[key] = data.pop()
+
+        if Const.kwargs in fields:
+            (_, knodes), (_, vnodes) = ast.iter_fields(fields[Const.kwargs])
+            for knode, vnode in zip(knodes, vnodes):
+                visit(knode, data)
+                key = data.pop()
+                visit(vnode, data)
+                value = data.pop()
+                kwargs[key] = value
+
+        kwargs.update(keywords)
+        obj = func(*args, **kwargs)
+        data.append(obj)
+        return
 
     if isinstance(node, ast.Tuple):
-        values = []
-        for elt in node.elts:
-            visit(elt, data)
+        values = list()
+        for e in node.elts:
+            visit(e, data)
             values.append(data.pop())
+
         data.append(values)
         return
 
@@ -737,50 +790,146 @@ def visit(node, data):
         data.append(id_)
         return
 
-    if isinstance(node, ast.keyword):
-        (_, key), (_, value) = ast.iter_fields(node)
-        visit(value, data)
-        data.append((key, data.pop()))
-        return
 
-    if isinstance(node, ast.Call):
+class bEvalVisitor(ast.NodeVisitor):
+
+    def __init__(self, expr):
+        self.expr = expr
+        self.data = list()
+
+    def visit_Expression(self, node):
+        self.visit(node.body)
+        obj = self.data.pop()
+        criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
+        self.data.append(criteria)
+
+    def visit_BoolOp(self, node):
+        if type(node.op) not in (ast.And, ast.Or,):
+            raise SyntaxError("%s is not supported" % type(node.op))
+
+        many = list()
+        for value in node.values:
+            self.visit(value)
+            obj = self.data.pop()
+            criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
+            many.append(criteria)
+
+        if isinstance(node.op, ast.And):
+            cls = (criteria_class.lookup(Const.And) if len(many) == 2 else criteria_class.lookup(Const.All))
+
+        else:
+            cls = (criteria_class.lookup(Const.Or) if len(many) == 2 else criteria_class.lookup(Const.Any))
+
+        criteria = cls(*many)
+        self.data.append(criteria)
+
+    def visit_UnaryOp(self, node):
+        if type(node.op) not in (ast.Not,):
+            raise SyntaxError("%s is not supported" % type(node.op))
+
+        self.visit(node.operand)
+        obj = self.data.pop()
+        criteria = obj if isinstance(obj, Criteria) else criteria_class.instance(Const.Bool, obj)
+
+        cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(node.op)))
+        criteria = cls(criteria)
+        self.data.append(criteria)
+
+    def visit_Compare(self, node):
+        if len(node.ops) not in (1, 2,):
+            raise SyntaxError("ast.Compare with more than 2 ops: %s is not supported" % node)
+
+        (_, left), (_, ops), (_, comps) = ast.iter_fields(node)
+        self.visit(left)
+        left = self.data.pop()
+
+        comparators = list()
+        for comparator in comps:
+            self.visit(comparator)
+            comparators.append(self.data.pop())
+
+        if len(ops) == 1:
+            right = comparators[0]
+            cls = criteria_class.lookup(ast_op_to_criteria.lookup(type(ops[0])))
+            criteria = cls(left, *right) if type(right) in (list, tuple,) else cls(left, right)
+            self.data.append(criteria)
+
+        else:
+            lower = left
+            lower_op = ast_op_to_operator.lookup(type(ops[0]))
+            one = comparators[0]
+            upper_op = ast_op_to_operator.lookup(type(ops[1]))
+            upper = comparators[1]
+            criteria = criteria_class.instance(Const.Between, lower, one, upper, lower_op, upper_op)
+            self.data.append(criteria)
+
+    def visit_Call(self, node):
         fields = {k: v for k, v in ast.iter_fields(node) if v}
 
-        visit(fields[Const.func], data)
-        func_name = data.pop()
-        func = SyntaxAstCallExtender.find_deserializer(func_name)
-        if not func:
-            raise SyntaxError("%s is not supported" % func_name)
+        self.visit(fields[Const.func])
+        name, args, keywords, kwargs = self.data.pop(), list(), dict(), dict()
 
-        args = list()
+        func = SyntaxAstCallExtender.find_deserializer(name)
+        if not func:
+            raise SyntaxError("%s is not supported" % name)
+
         if Const.args in fields:
             for arg in fields[Const.args]:
-                visit(arg, data)
-                args.append(data.pop())
+                self.visit(arg)
+                args.append(self.data.pop())
 
-        keywords = {}
         if Const.keywords in fields:
             for keyword in fields[Const.keywords]:
-                visit(keyword, data)
-                k, v = data.pop()
-                keywords[k] = v
+                (_, key), (_, value) = ast.iter_fields(keyword)
+                self.visit(value)
+                keywords[key] = self.data.pop()
 
-        kwargs = {}
         if Const.kwargs in fields:
             (_, knodes), (_, vnodes) = ast.iter_fields(fields[Const.kwargs])
-            keys = list()
-            for knode in knodes:
-                visit(knode, data)
-                keys.append(data.pop())
-            values = list()
-            for vnode in vnodes:
-                visit(vnode, data)
-                values.append(data.pop())
-            kwargs = {k: v for k, v in zip(keys, values)}
+            for knode, vnode in zip(knodes, vnodes):
+                self.visit(knode)
+                key = self.data.pop()
+                self.visit(vnode)
+                value = self.data.pop()
+                kwargs[key] = value
 
-        keywords.update(kwargs)
-        data.append(func(*args, **keywords))
-        return
+        kwargs.update(keywords)
+        obj = func(*args, **kwargs)
+        self.data.append(obj)
+
+    def visit_Tuple(self, node):
+        values = list()
+        for e in node.elts:
+            self.visit(e)
+            values.append(self.data.pop())
+
+        self.data.append(values)
+
+    def visit_Num(self, node):
+        self.data.append(node.n)
+
+    def visit_Str(self, node):
+        self.data.append(node.s)
+
+    def visit_Name(self, node):
+        if node.id == Const.True_:
+            id_ = True
+
+        elif node.id == Const.False_:
+            id_ = False
+
+        elif node.id == Const.None_:
+            id_ = None
+
+        else:
+            id_ = node.id
+
+        self.data.append(id_)
+
+    def go(self):
+        node = ast.parse(self.expr, mode=Const.eval_)
+        self.visit(node)
+        return self.data.pop()
 
 
 class Config(object):
@@ -864,8 +1013,8 @@ criteria_class = Config({
 
 class SyntaxAstCallExtender(object):
 
-    deserializers = {}
-    comparators = {}
+    deserializers = dict()
+    comparators = dict()
 
     @classmethod
     def register(cls, extender):
