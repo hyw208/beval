@@ -72,15 +72,15 @@ def safe_monad(func, *args, **kwargs):
         return obj, None
 
 
-def _quote(obj):
+def quote(obj):
     return ("'%s'" if isinstance(obj, str) else "%s") % obj
 
 
-def _access(ctx, key):
+def access(ctx, key):
     return ctx[key]
 
 
-def _types_supported_as_key(criteria, key):
+def types_supported_as_key(criteria, key):
     if isinstance(key, str) or isinstance(key, bool) or isinstance(key, numbers.Number):
         return key
 
@@ -88,7 +88,7 @@ def _types_supported_as_key(criteria, key):
         raise TypeError("%s is not supported as key for %s" % type(key), type(criteria))
 
 
-def _assert_outcomes_d_w_a(std_types, fuzzy_types):
+def assert_outcomes_d_w_a(std_types, fuzzy_types):
     """ remove this decorator after fully tested with use cases """
     def assert_outcomes_d(func):
 
@@ -155,7 +155,7 @@ class Ctx(AbstractCtx):
 
 class Criteria(object):
 
-    @_assert_outcomes_d_w_a([True, False, Const.ERROR], [True, False, Const.UNKNOWN])
+    @assert_outcomes_d_w_a([True, False, Const.ERROR], [True, False, Const.UNKNOWN])
     def __call__(self, obj, fuzzy=False):
         ctx = obj if isinstance(obj, Ctx) else criteria_class.instance(Const.Ctx, obj, fuzzy)
         return self.eval(ctx)
@@ -274,10 +274,10 @@ class Bool(Criteria):
 
     def __init__(self, key):
         super(Bool, self).__init__(stack=False)
-        self._key = _types_supported_as_key(self, key)
+        self._key = types_supported_as_key(self, key)
 
     def eval(self, ctx):
-        (obj, err) = safe_monad(_access, ctx, self._key)
+        (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
             if isinstance(obj, bool):
@@ -316,11 +316,11 @@ class Eq(Criteria):
     def __init__(self, key, right, op=operator.eq):
         super(Eq, self).__init__(stack=False)
         self._op = op
-        self._key = _types_supported_as_key(self, key)
+        self._key = types_supported_as_key(self, key)
         self._right = right
 
     def eval(self, ctx):
-        (obj, err) = safe_monad(_access, ctx, self._key)
+        (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
             (obj_, err_) = self.compare(ctx, self._key, self._op, obj, self._right)
@@ -335,7 +335,7 @@ class Eq(Criteria):
             return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
 
     def __str__(self):
-        return "%s %s %s" % (self._key, operator_ser_symbol.lookup(self._op), _quote(self._right))
+        return "%s %s %s" % (self._key, operator_ser_symbol.lookup(self._op), quote(self._right))
 
 
 class NotEq(Eq):
@@ -394,12 +394,12 @@ class Between(Criteria):
         super(Between, self).__init__(stack=False)
         self._lower = lower
         self._lower_op = lower_op
-        self._key = _types_supported_as_key(self, key)
+        self._key = types_supported_as_key(self, key)
         self._upper_op = upper_op
         self._upper = upper
 
     def eval(self, ctx):
-        (obj, err) = safe_monad(_access, ctx, self._key)
+        (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
             (obj_, err_) = self.compare(ctx, self._key, self._lower_op, self._lower, obj)
@@ -435,7 +435,7 @@ class In(Eq):
         super(In, self).__init__(key, right)
 
     def eval(self, ctx):
-        (obj, err) = safe_monad(_access, ctx, self._key)
+        (obj, err) = safe_monad(access, ctx, self._key)
 
         if err is None:
             negative = 0
@@ -467,7 +467,7 @@ class In(Eq):
             return Const.UNKNOWN if self.fuzzy(ctx) else Const.ERROR, err
 
     def __str__(self):
-        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.in_), ",".join(_quote(one) for one in self._right))
+        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.in_), ",".join(quote(one) for one in self._right))
 
 
 class NotIn(In):
@@ -480,7 +480,7 @@ class NotIn(In):
         return not obj if obj in (True, False,) else obj, err
 
     def __str__(self):
-        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.not_in_), ",".join(_quote(one) for one in self._right))
+        return "%s %s (%s,)" % (self._key, operator_ser_symbol.lookup(Const.not_in_), ",".join(quote(one) for one in self._right))
 
 
 class All(Criteria):
