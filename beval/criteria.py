@@ -26,6 +26,7 @@ class Const(object):
     Not = "Not"
     Ctx = "Ctx"
     Visitor = "Visitor"
+    Universal = "Universal"
 
     True_ = "True"
     False_ = "False"
@@ -38,6 +39,7 @@ class Const(object):
 
     true = "true"
     false = "false"
+    universal = "*"
 
     eq_ = "=="
     ne_ = "!="
@@ -340,8 +342,19 @@ class Eq(Criteria):
 
 class NotEq(Eq):
 
+    @property
+    def op(self):
+        return operator.ne
+
     def __init__(self, key, right):
-        super(NotEq, self).__init__(key, right, operator.ne)
+        super(NotEq, self).__init__(key, right)
+
+    def eval(self, ctx):
+        (obj, err) = super(NotEq, self).eval(ctx)
+        return not obj if obj in (True, False,) else obj, err
+
+    def __str__(self):
+        return "%s %s %s" % (self._key, operator_ser_symbol.lookup(self.op), quote(self._right))
 
 
 class Lt(Eq):
@@ -616,6 +629,15 @@ class Not(Criteria):
         return "%s (%s)" % (operator_ser_symbol.lookup(Const.not_), str(self._one))
 
 
+class Universal(object):
+
+    def __eq__(self, other):
+        return True
+
+    def __str__(self):
+        return "'%s'" % Const.universal
+
+
 class bEvalVisitor(ast.NodeVisitor):
 
     def __init__(self, expr):
@@ -733,7 +755,7 @@ class bEvalVisitor(ast.NodeVisitor):
         self.data.append(node.n)
 
     def visit_Str(self, node):
-        self.data.append(node.s)
+        self.data.append(universal if node.s == Const.universal else node.s)
 
     def visit_Name(self, node):
         if node.id == Const.True_:
@@ -867,11 +889,10 @@ criteria_class = Config({
     Const.Not: Not,
     Const.Ctx: Ctx,
     Const.Visitor: bEvalVisitor,
+    Const.Universal: Universal,
 })
 
 
 cTrue = criteria_class.instance(Const.Bool, True)
 cFalse = criteria_class.instance(Const.Bool, False)
-
-
-
+universal = criteria_class.instance(Const.Universal)

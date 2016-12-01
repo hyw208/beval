@@ -1,7 +1,7 @@
 import operator
 import unittest
 from unittest import TestCase
-from beval.criteria import Criteria, Const, Eq, NotEq, Ctx, Gt, to_criteria, And, All
+from beval.criteria import Criteria, Const, Eq, NotEq, Ctx, Gt, to_criteria, And, All, universal
 from test_helper import acura_small, acura_midsize
 
 
@@ -68,6 +68,21 @@ class TestEq(TestCase):
         all_ = All(Eq("make", "Acura"), Eq("price", 18.8), Eq("american", True))
         text = str(all_)
         self.assertEqual(text, "make == 'Acura' and price == 18.8 and american == True")
+
+    def test_universal(self):
+        eq = Eq("make", universal)
+        expected = "make == '*'"
+        self.assertEqual(expected, str(eq))
+
+        eq = to_criteria(expected)
+        self.assertEqual(eq.right, Const.universal)
+        self.assertEqual(expected, str(eq))
+
+        for value in ("xyz", 1, 0, 10.3, False, True, object(), "*"):
+            car = {"make": value}
+            (ans, err) = eq(car)
+            self.assertTrue(ans)
+            self.assertIsNone(err)
 
 
 class TestNotEq(TestCase):

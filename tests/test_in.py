@@ -1,7 +1,7 @@
 import unittest
 from unittest import TestCase
 
-from beval.criteria import Ctx, In, to_criteria
+from beval.criteria import Const, Ctx, In, to_criteria, universal
 from test_helper import acura_small
 
 
@@ -78,6 +78,21 @@ class TestIn(TestCase):
         self.assertIsNone(err)
         text = str(in_)
         self.assertEqual(expected, text)
+
+    def test_universal(self):
+        in_ = In("make", universal)
+        expected = "make in ('*',)"
+        self.assertEqual(expected, str(in_))
+
+        in_ = to_criteria(expected)
+        self.assertIn(universal, in_.right)
+        self.assertEqual(expected, str(in_))
+
+        for value in ("xyz", 1, 0, 10.3, False, True, object(), "*"):
+            car = {"make": value}
+            (ans, err) = in_(car)
+            self.assertTrue(ans)
+            self.assertIsNone(err)
 
 
 if __name__ == '__main__':

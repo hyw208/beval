@@ -2,7 +2,7 @@ import operator
 import unittest
 from unittest import TestCase
 
-from beval.criteria import Criteria, Const, NotEq, to_criteria, Ctx
+from beval.criteria import Criteria, Const, NotEq, to_criteria, Ctx, In, universal
 from test_helper import acura_small
 
 
@@ -43,6 +43,21 @@ class TestNe(TestCase):
             self.assertEqual(not_eq.right, 'Acura')
             self.assertEqual(not_eq.op, operator.ne)
             (ans, err) = not_eq(Ctx(acura))
+            self.assertFalse(ans)
+            self.assertIsNone(err)
+
+    def test_universal(self):
+        notEq = NotEq("make", universal)
+        expected = "make != '*'"
+        self.assertEqual(expected, str(notEq))
+
+        notEq = to_criteria(expected)
+        self.assertEqual(notEq.right, Const.universal)
+        self.assertEqual(expected, str(notEq))
+
+        for value in ("xyz", 1, 0, 10.3, False, True, object(), "*"):
+            car = {"make": value}
+            (ans, err) = notEq(car)
             self.assertFalse(ans)
             self.assertIsNone(err)
 

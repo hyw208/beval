@@ -1,7 +1,7 @@
 import unittest
 from unittest import TestCase
 
-from beval.criteria import Ctx, NotIn, to_criteria
+from beval.criteria import Ctx, NotIn, to_criteria, universal
 from test_helper import acura_small
 
 
@@ -46,6 +46,21 @@ class TestNotIn(TestCase):
                 (ans, err) = in_(ctx)
                 self.assertTrue(ans)
                 self.assertIsNone(err)
+
+    def test_universal(self):
+        notIn = NotIn("make", universal)
+        expected = "make not in ('*',)"
+        self.assertEqual(expected, str(notIn))
+
+        notIn = to_criteria(expected)
+        self.assertIn(universal, notIn.right)
+        self.assertEqual(expected, str(notIn))
+
+        for value in ("xyz", 1, 0, 10.3, False, True, object(), "*"):
+            car = {"make": value}
+            (ans, err) = notIn(car)
+            self.assertFalse(ans)
+            self.assertIsNone(err)
 
 
 if __name__ == '__main__':
