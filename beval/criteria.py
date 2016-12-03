@@ -151,6 +151,10 @@ class Ctx(AbstractCtx):
             obj = getattr(self._one, key)
             return obj() if callable(obj) else obj
 
+        elif isinstance(key, str) and hasattr(self, key):
+            obj = getattr(self, key)
+            return obj() if callable(obj) else obj
+
         else:
             raise KeyError("cannot find key '%s'" % key)
 
