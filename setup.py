@@ -13,7 +13,7 @@ with open(path.join(current_path, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='beval',
 
-    version='1.0.6',
+    version='1.0.7',
 
     description='boolean expression evaluator',
 

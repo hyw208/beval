@@ -33,6 +33,7 @@ class Const(object):
     None_ = "None"
 
     fuzzy = "fuzzy"
+    default = "default"
 
     getitem = "__getitem__"
     eval_ = "eval"
@@ -111,8 +112,19 @@ def assert_outcomes_d_w_a(std_types, fuzzy_types):
 
 class AbstractCtx(object):
 
-    def __getitem__(self, key):
-        (obj, err) = safe_monad(self.key, key)
+    def get(self, key, *args, **kwargs):
+        try:
+            return self.__getitem__(key, *args, **kwargs)
+
+        except KeyError as err:
+            if Const.default in kwargs:
+                return kwargs[Const.default]
+
+            else:
+                raise err
+
+    def __getitem__(self, key, *args, **kwargs):
+        (obj, err) = safe_monad(self.key, key, *args, **kwargs)
         if err is None:
             return obj
 
@@ -125,7 +137,7 @@ class AbstractCtx(object):
 
         raise KeyError("cannot find key '%s'" % key)
 
-    def key(self, key):
+    def key(self, key, *args, **kwargs):
         raise NotImplementedError
 
 
@@ -143,7 +155,7 @@ class Ctx(AbstractCtx):
         self._one = one
         self._fuzzy = fuzzy
 
-    def key(self, key):
+    def key(self, key, *args, **kwargs):
         if hasattr(self._one, Const.getitem) and key in self._one:
             return self._one[key]
 

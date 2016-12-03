@@ -6,6 +6,17 @@ from test_helper import acura_small
 
 class TestCtx(TestCase):
 
+    def test_get(self):
+        ctx = Ctx(acura_small)
+        make = ctx["make"]
+        self.assertEqual(make, "Acura")
+
+        with self.assertRaises(KeyError):
+            ctx["cpu"]
+
+        cpu = ctx.get("cpu", default="Intel")
+        self.assertEqual(cpu, "Intel")
+
     def test_targets(self):
         with acura_small as acura:
             for fuzzy in (True, False):
