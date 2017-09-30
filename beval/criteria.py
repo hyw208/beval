@@ -186,7 +186,7 @@ class Criteria(object):
         raise NotImplementedError
 
     def fuzzy(self, ctx):
-        return ctx.fuzzy
+        return ctx.fuzzy if getattr(ctx, 'fuzzy') else False
 
     def __init__(self, stack=True):
         self._stack = list() if stack else None
